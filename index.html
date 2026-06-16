@@ -87,7 +87,6 @@
             <option value="booking">Booking</option>
             <option value="cashing">Cashing</option>
             <option value="totalCost">Total Cost</option>
-            <option value="operatingResult">Operating Result</option>
             <option value="cashCoverage">Cash Coverage</option>
             <option value="bookingToCash">Booking-to-Cash</option>
           </select>
@@ -110,30 +109,16 @@
       <div id="kpiGrid" class="kpi-grid"></div>
     </section>
 
-    <section class="col3">
-      <div class="card">
-        <div id="ytdTitle" class="card-title">Period Comparison</div>
-        <div id="ytdSubtitle" class="card-sub">Equivalent period comparison</div>
-        <div class="chart-wrap"><canvas id="ytdChart"></canvas></div>
-      </div>
-      <div class="card">
-        <div id="waterfallTitle" class="card-title">Profitability Bridge</div>
-        <div id="waterfallSubtitle" class="card-sub">Booking → Operating Result</div>
-        <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
-      </div>
+    <section class="card">
+      <div id="ytdTitle" class="card-title">Period Comparison</div>
+      <div id="ytdSubtitle" class="card-sub">Equivalent period comparison</div>
+      <div class="chart-wrap chart-wrap-large"><canvas id="ytdChart"></canvas></div>
     </section>
 
-    <section class="col22">
-      <div class="card">
-        <div id="trendTitle" class="card-title">Monthly Performance</div>
-        <div id="trendSubtitle" class="card-sub">Full-year context with missing future months left blank</div>
-        <div class="chart-wrap chart-wrap-large"><canvas id="trendChart"></canvas></div>
-      </div>
-      <div class="card">
-        <div id="costTitle" class="card-title">Cost & Operating Result</div>
-        <div id="costSubtitle" class="card-sub">Both years shown across the selected display range</div>
-        <div class="chart-wrap chart-wrap-large"><canvas id="costChart"></canvas></div>
-      </div>
+    <section class="card">
+      <div id="trendTitle" class="card-title">Monthly Performance</div>
+      <div id="trendSubtitle" class="card-sub">Full-year context with missing future months left blank</div>
+      <div class="chart-wrap chart-wrap-large"><canvas id="trendChart"></canvas></div>
     </section>
 
     <section class="grid3">
@@ -172,7 +157,6 @@
               <th id="tableCurrentCashing">Current Cashing</th>
               <th>Cash Δ</th>
               <th id="tableCurrentCost">Current Total Cost</th>
-              <th id="tableCurrentResult">Current Op. Result</th>
             </tr>
           </thead>
           <tbody id="matrixTable"></tbody>
