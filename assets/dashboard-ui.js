@@ -63,7 +63,7 @@ function renderDataQuality() {
 
   if (partialIndex >= 0) {
     if (byId('includePartial').checked && indexes.includes(partialIndex)) {
-      warnings.unshift(`${parsedData.months[partialIndex]} ${current} is shown as MTD. Its cost values are incomplete, so cost, operating-result, and coverage metrics may be temporarily distorted.`);
+      warnings.unshift(`${parsedData.months[partialIndex]} ${current} is shown as MTD. Its cost values are incomplete, so total cost and coverage metrics may be temporarily distorted.`);
     } else {
       warnings.unshift(`${parsedData.months[partialIndex]} ${current} is available as MTD but excluded from the selected comparison.`);
     }
@@ -98,7 +98,6 @@ function renderKpis(snapshot) {
     { key: 'booking', label: 'Booking', accent: '#173f2e', kind: 'amount' },
     { key: 'cashing', label: 'Cashing', accent: '#2d6a4f', kind: 'amount' },
     { key: 'totalCost', label: 'Total Cost', accent: '#7c3aed', kind: 'amount' },
-    { key: 'operatingResult', label: 'Operating Result', accent: '#dc2626', kind: 'amount' },
     { key: 'cashCoverage', label: 'Cash Coverage', accent: '#ea580c', kind: 'ratio' },
     { key: 'bookingToCash', label: 'Booking-to-Cash', accent: '#2563eb', kind: 'ratio' }
   ];
