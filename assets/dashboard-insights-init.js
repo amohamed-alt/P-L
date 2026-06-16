@@ -1,46 +1,71 @@
-function renderInsightsAndRecommendations(snapshot) {
+function renderInsights(snapshot) {
   const priorYear = snapshot.priorYear;
   const currentYear = snapshot.currentYear;
   const current = snapshot.years[currentYear];
   const prior = snapshot.years[priorYear];
   const records = monthlyRecords(snapshot.indexes, priorYear, currentYear);
 
-  const bookingVariance = getVariance(current.booking, prior.booking);
-  const cashingVariance = getVariance(current.cashing, prior.cashing);
-  const cogsVariance = getVariance(current.cogs, prior.cogs);
-  const overheadVariance = getVariance(current.overheads, prior.overheads);
-  const supportVariance = getVariance(current.support, prior.support);
-  const operatingImprovement = current.operatingResult - prior.operatingResult;
+  if (!current.hasData) {
+    byId('insightList').innerHTML = `
+      <div class="insight warn">
+        <div class="insight-icon">⚠️</div>
+        <div>
+          <div class="insight-title">No ${currentYear} comparison data for ${periodLabel()}</div>
+          <div class="insight-body">Choose an available month, use the Include MTD preset, or swap the years. Missing months are no longer treated as zero performance.</div>
+        </div>
+      </div>
+      <div class="insight info">
+        <div class="insight-icon">📅</div>
+        <div>
+          <div class="insight-title">Available ${currentYear} data ends in ${latestDataMonthIndex >= 0 ? parsedData.months[latestDataMonthIndex] : '—'}</div>
+          <div class="insight-body">Use the quick presets above to return to the latest valid reporting period.</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const bookingVariance = prior.hasData ? getVariance(current.booking, prior.booking) : { absolute: null, percent: null };
+  const cashingVariance = prior.hasData ? getVariance(current.cashing, prior.cashing) : { absolute: null, percent: null };
+  const cogsVariance = prior.hasData ? getVariance(current.cogs, prior.cogs) : { absolute: null, percent: null };
+  const overheadVariance = prior.hasData ? getVariance(current.overheads, prior.overheads) : { absolute: null, percent: null };
+  const supportVariance = prior.hasData ? getVariance(current.support, prior.support) : { absolute: null, percent: null };
+  const operatingImprovement = prior.hasData ? current.operatingResult - prior.operatingResult : null;
   const receivablesGap = current.booking - current.cashing;
   const bestMonth = records.length ? [...records].sort((a, b) => b.bookingCurrent - a.bookingCurrent)[0] : null;
   const weakestMonth = records.length ? [...records].sort((a, b) => a.bookingCurrent - b.bookingCurrent)[0] : null;
-  const averageMonthlyCost = snapshot.indexes.length ? current.totalCost / snapshot.indexes.length : 0;
-  const monthlyBreakEvenGap = snapshot.indexes.length ? Math.max(0, -current.operatingResult / snapshot.indexes.length) : 0;
 
   const insights = [
     {
-      type: cashingVariance.percent !== null && bookingVariance.percent !== null && cashingVariance.percent > bookingVariance.percent ? 'pos' : 'info',
+      type: !prior.hasData ? 'info' : cashingVariance.percent !== null && bookingVariance.percent !== null && cashingVariance.percent > bookingVariance.percent ? 'pos' : 'info',
       icon: '📈',
-      title: 'Commercial growth and collection performance',
-      body: `Booking changed ${bookingVariance.percent === null ? '—' : formatPercent(bookingVariance.percent)} from ${priorYear} to ${currentYear}, reaching ${formatCompact(current.booking, 2, { currency: true })}. Cashing changed ${cashingVariance.percent === null ? '—' : formatPercent(cashingVariance.percent)} to ${formatCompact(current.cashing, 2, { currency: true })}.`
+      title: prior.hasData ? 'Commercial growth and collection performance' : 'Comparison-year performance',
+      body: prior.hasData
+        ? `Booking changed ${bookingVariance.percent === null ? '—' : formatPercent(bookingVariance.percent)} from ${priorYear} to ${currentYear}, reaching ${formatCompact(current.booking, 2, { currency: true })}. Cashing changed ${cashingVariance.percent === null ? '—' : formatPercent(cashingVariance.percent)} to ${formatCompact(current.cashing, 2, { currency: true })}.`
+        : `${currentYear} booking is ${formatCompact(current.booking, 2, { currency: true })} and cashing is ${formatCompact(current.cashing, 2, { currency: true })}. The ${priorYear} baseline is unavailable for this selected period.`
     },
     {
-      type: current.operatingResult >= 0 ? 'pos' : operatingImprovement > 0 ? 'pos' : 'neg',
+      type: current.operatingResult >= 0 ? 'pos' : operatingImprovement !== null && operatingImprovement > 0 ? 'pos' : 'neg',
       icon: current.operatingResult >= 0 ? '✅' : '⚖️',
       title: current.operatingResult >= 0 ? 'The selected period is above operating break-even' : 'Operating result remains below break-even',
-      body: `The ${currentYear} operating result is ${formatFull(current.operatingResult)}. This is ${operatingImprovement >= 0 ? 'an improvement of' : 'a decline of'} ${formatCompact(Math.abs(operatingImprovement), 2, { currency: true })} compared with ${priorYear}.`
+      body: prior.hasData
+        ? `The ${currentYear} operating result is ${formatFull(current.operatingResult)}. This is ${operatingImprovement >= 0 ? 'an improvement of' : 'a decline of'} ${formatCompact(Math.abs(operatingImprovement), 2, { currency: true })} compared with ${priorYear}.`
+        : `The ${currentYear} operating result is ${formatFull(current.operatingResult)}. A baseline comparison is unavailable for the selected period.`
     },
     {
-      type: cogsVariance.percent !== null && cogsVariance.percent > 0.15 ? 'neg' : 'info',
+      type: prior.hasData && cogsVariance.percent !== null && cogsVariance.percent > 0.15 ? 'neg' : 'info',
       icon: '⚠️',
-      title: 'COGS movement requires review',
-      body: `COGS changed ${cogsVariance.percent === null ? '—' : formatPercent(cogsVariance.percent)} to ${formatCompact(current.cogs, 2, { currency: true })}. Compare this with booking growth of ${bookingVariance.percent === null ? '—' : formatPercent(bookingVariance.percent)} to separate volume growth from margin pressure.`
+      title: 'COGS movement',
+      body: prior.hasData
+        ? `COGS changed ${cogsVariance.percent === null ? '—' : formatPercent(cogsVariance.percent)} to ${formatCompact(current.cogs, 2, { currency: true })}. Compare this with booking growth of ${bookingVariance.percent === null ? '—' : formatPercent(bookingVariance.percent)} to separate volume growth from margin pressure.`
+        : `${currentYear} COGS is ${formatCompact(current.cogs, 2, { currency: true })}. No ${priorYear} baseline is available for this period.`
     },
     {
-      type: overheadVariance.absolute <= 0 && supportVariance.absolute <= 0 ? 'pos' : 'warn',
+      type: prior.hasData && overheadVariance.absolute <= 0 && supportVariance.absolute <= 0 ? 'pos' : 'warn',
       icon: '💡',
       title: 'Fixed-cost discipline',
-      body: `Overheads changed ${overheadVariance.percent === null ? '—' : formatPercent(overheadVariance.percent)} and support allocation changed ${supportVariance.percent === null ? '—' : formatPercent(supportVariance.percent)} over the selected months.`
+      body: prior.hasData
+        ? `Overheads changed ${overheadVariance.percent === null ? '—' : formatPercent(overheadVariance.percent)} and support allocation changed ${supportVariance.percent === null ? '—' : formatPercent(supportVariance.percent)} over the selected months.`
+        : `Overheads are ${formatCompact(current.overheads, 2, { currency: true })} and support allocation is ${formatCompact(current.support, 2, { currency: true })} in ${currentYear}.`
     },
     {
       type: 'warn',
@@ -63,53 +88,6 @@ function renderInsightsAndRecommendations(snapshot) {
       <div class="insight-icon">${insight.icon}</div>
       <div><div class="insight-title">${insight.title}</div><div class="insight-body">${insight.body}</div></div>
     </div>`).join('');
-
-  const recommendations = [
-    {
-      title: 'Investigate COGS and protect gross margin',
-      priority: 'High Priority',
-      priorityClass: 'p1',
-      body: `COGS changed ${cogsVariance.percent === null ? '—' : formatPercent(cogsVariance.percent)}. Reconcile vendor, delivery, implementation, and allocation drivers before the next forecast cycle.`
-    },
-    {
-      title: 'Set a formal monthly break-even booking floor',
-      priority: 'High Priority',
-      priorityClass: 'p1',
-      body: `Average monthly cost in the selected period is about ${formatCompact(averageMonthlyCost, 2, { currency: true })}. Add the current average monthly shortfall of ${formatCompact(monthlyBreakEvenGap, 2, { currency: true })} and set the operating floor above that level.`
-    },
-    {
-      title: 'Accelerate collection of the booking-to-cash gap',
-      priority: 'Medium',
-      priorityClass: 'p2',
-      body: `The outstanding gap is ${formatCompact(receivablesGap, 2, { currency: true })}. Review overdue invoices weekly and manage conversion above the current ${formatPercent(current.bookingToCash)}.`
-    },
-    {
-      title: bestMonth ? `Replicate the ${bestMonth.month} pipeline conditions` : 'Review the strongest available month',
-      priority: 'Medium',
-      priorityClass: 'p2',
-      body: bestMonth
-        ? `Review source, product mix, owner contribution, pricing, and close timing behind ${bestMonth.month} to turn the strongest month into a repeatable playbook.`
-        : 'Select an available period to identify and analyze the strongest booking month.'
-    },
-    {
-      title: 'Complete current-month cost allocation before final reporting',
-      priority: 'Operational',
-      priorityClass: 'p3',
-      body: (parsedData.partial[String(currentYear)] || []).some(Boolean)
-        ? `The current ${currentYear} month is visible as MTD, but incomplete cost allocation can distort profitability and coverage. Keep the MTD badge until the month is closed.`
-        : 'Maintain a documented monthly close date so every management comparison uses complete and equivalent data.'
-    }
-  ];
-
-  byId('recommendationList').innerHTML = recommendations.map((recommendation, index) => `
-    <div class="rec">
-      <div class="rec-header">
-        <div class="rec-num">${index + 1}</div>
-        <div class="rec-title">${recommendation.title}</div>
-        <div class="priority-tag ${recommendation.priorityClass}">${recommendation.priority}</div>
-      </div>
-      <div class="rec-body">${recommendation.body}</div>
-    </div>`).join('');
 }
 
 function renderDashboard() {
@@ -122,7 +100,7 @@ function renderDashboard() {
   renderCharts(snapshot);
   renderCoverage(snapshot);
   renderMatrix(snapshot);
-  renderInsightsAndRecommendations(snapshot);
+  renderInsights(snapshot);
 }
 
 function normalizeFilterState(changedId) {
@@ -149,6 +127,89 @@ function normalizeFilterState(changedId) {
   if (byId('comparisonMode').value === 'available') byId('includePartial').checked = true;
 }
 
+function applyPreset(type) {
+  detectReportingPeriod();
+  byId('startMonth').value = '0';
+
+  if (type === 'closed') {
+    byId('comparisonMode').value = 'closed';
+    byId('includePartial').checked = false;
+    byId('endMonth').value = String(Math.max(0, closedMonthIndex));
+    byId('fullYearContext').checked = true;
+  }
+
+  if (type === 'mtd') {
+    byId('comparisonMode').value = 'available';
+    byId('includePartial').checked = true;
+    byId('endMonth').value = String(Math.max(0, latestDataMonthIndex));
+    byId('fullYearContext').checked = true;
+  }
+
+  if (type === 'currentMonth') {
+    const monthIndex = Math.max(0, latestDataMonthIndex);
+    byId('comparisonMode').value = 'custom';
+    byId('includePartial').checked = true;
+    byId('startMonth').value = String(monthIndex);
+    byId('endMonth').value = String(monthIndex);
+    byId('fullYearContext').checked = false;
+  }
+
+  renderDashboard();
+}
+
+function swapYears() {
+  const priorValue = byId('priorYear').value;
+  byId('priorYear').value = byId('currentYear').value;
+  byId('currentYear').value = priorValue;
+  detectReportingPeriod();
+
+  if (byId('comparisonMode').value === 'available') {
+    byId('endMonth').value = String(Math.max(0, latestDataMonthIndex));
+  }
+  if (byId('comparisonMode').value === 'closed') {
+    byId('endMonth').value = String(Math.max(0, closedMonthIndex));
+  }
+
+  renderDashboard();
+}
+
+function csvEscape(value) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportSelectedCsv() {
+  const { prior, current } = selectedYears();
+  const indexes = periodIndexes();
+  const metrics = ['booking', 'cashing', 'cogs', 'overheads', 'support', 'totalCost', 'operatingResult', 'cashGap', 'cashCoverage', 'bookingToCash'];
+  const headers = ['Month', 'Year', 'Status', ...metrics.map((metric) => METRICS[metric].label)];
+  const rows = [headers];
+
+  [prior, current].forEach((year) => {
+    indexes.forEach((index) => {
+      const available = monthHasData(year, index);
+      const status = !available ? 'unavailable' : monthIsPartial(year, index) ? 'partial' : 'available';
+      rows.push([
+        parsedData.months[index],
+        year,
+        status,
+        ...metrics.map((metric) => available ? getMetricSeries(metric, year)[index] : '')
+      ]);
+    });
+  });
+
+  const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `tech-licensing-${prior}-vs-${current}-${periodLabel().replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function attachFilterEvents() {
   const filterIds = [
     'priorYear',
@@ -168,11 +229,16 @@ function attachFilterEvents() {
     });
   });
 
+  byId('presetClosed').addEventListener('click', () => applyPreset('closed'));
+  byId('presetMtd').addEventListener('click', () => applyPreset('mtd'));
+  byId('presetCurrentMonth').addEventListener('click', () => applyPreset('currentMonth'));
+  byId('swapYears').addEventListener('click', swapYears);
   byId('resetFilters').addEventListener('click', () => {
     populateFilters();
     renderDashboard();
   });
   byId('refreshButton').addEventListener('click', loadDashboard);
+  byId('exportCsvButton').addEventListener('click', exportSelectedCsv);
   byId('printButton').addEventListener('click', () => window.print());
 }
 
