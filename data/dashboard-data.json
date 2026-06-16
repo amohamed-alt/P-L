@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tech Licensing — Executive Dashboard 2025 vs 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --forest:   #1B3A2C;
+    --forest2:  #2d5a3d;
+    --mint:     #4ade80;
+    --slate50:  #f8fafc;
+    --slate100: #f1f5f9;
+    --slate200: #e2e8f0;
+    --slate400: #94a3b8;
+    --slate500: #64748b;
+    --slate700: #334155;
+    --slate900: #0f172a;
+    --red:      #dc2626;
+    --amber:    #d97706;
+    --emerald:  #16a34a;
+    --violet:   #7c3aed;
+    --orange:   #ea580c;
+    --yellow:   #ca8a04;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--slate100);
+    color: var(--slate900);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────────────────── */
+  header {
+    background: var(--forest);
+    color: #fff;
+    padding: 18px 28px 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -.3px;
+  }
+  header .sub {
+    font-size: 11px;
+    opacity: .65;
+    margin-top: 2px;
+  }
+  header .pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 20px;
+    padding: 3px 10px;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,.2);
+  }
+  .pill.amber { background: rgba(217,119,6,.2); border-color: rgba(217,119,6,.4); color: #fbbf24; }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); }
+
+  /* ── Layout ──────────────────────────────────────────────────────────────── */
+  main {
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--slate400);
+    margin-bottom: 10px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    border: 1px solid var(--slate200);
+    padding: 18px 20px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--slate700);
+    margin-bottom: 2px;
+  }
+  .card-sub {
+    font-size: 10px;
+    color: var(--slate400);
+    margin-bottom: 14px;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .col3   { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+  .col22  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ── KPI cards ───────────────────────────────────────────────────────────── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+  .kpi {
+    background: #fff;
+    border: 1px solid var(--slate200);
+    border-radius: 12px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--kpi-accent, var(--forest));
+    border-radius: 12px 12px 0 0;
+  }
+  .kpi-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--slate400);
+    margin-bottom: 6px;
+  }
+  .kpi-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--slate900);
+    letter-spacing: -.5px;
+    line-height: 1;
+  }
+  .kpi-prior {
+    font-size: 10px;
+    color: var(--slate400);
+    margin-top: 4px;
+  }
+  .kpi-var {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .kpi-var.up { color: var(--emerald); }
+  .kpi-var.down { color: var(--red); }
+  .kpi-var .arrow { font-size: 13px; }
+  .badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    float: right;
+    margin-top: 2px;
+  }
+  .badge.strong   { background: #dcfce7; color: #15803d; }
+  .badge.improve  { background: #d1fae5; color: #065f46; }
+  .badge.watch    { background: #fef3c7; color: #92400e; }
+  .badge.critical { background: #fee2e2; color: #991b1b; }
+  .badge.stable   { background: var(--slate100); color: var(--slate500); }
+
+  /* ── Monthly table ───────────────────────────────────────────────────────── */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--slate100); }
+  th { font-size: 10px; font-weight: 700; color: var(--slate400); text-transform: uppercase; letter-spacing: .5px; background: var(--slate50); }
+  th:first-child, td:first-child { text-align: left; }
+  td { font-size: 12px; color: var(--slate700); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--slate50); }
+  td.pos { color: var(--emerald); font-weight: 600; }
+  td.neg { color: var(--red); font-weight: 600; }
+  td.bold { font-weight: 700; color: var(--slate900); }
+  .month-label { font-weight: 600; color: var(--slate700); }
+
+  /* ── Insights ────────────────────────────────────────────────────────────── */
+  .insight-list { display: flex; flex-direction: column; gap: 10px; }
+  .insight {
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .insight.pos { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .insight.warn { background: #fffbeb; border: 1px solid #fde68a; }
+  .insight.neg  { background: #fef2f2; border: 1px solid #fecaca; }
+  .insight.info { background: var(--slate50); border: 1px solid var(--slate200); }
+  .insight-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .insight-title { font-size: 11px; font-weight: 700; margin-bottom: 2px; }
+  .insight-body  { font-size: 11px; line-height: 1.55; color: var(--slate500); }
+  .insight.pos .insight-title  { color: #15803d; }
+  .insight.warn .insight-title { color: #92400e; }
+  .insight.neg .insight-title  { color: #991b1b; }
+  .insight.info .insight-title { color: var(--slate700); }
+
+  /* ── Rec cards ───────────────────────────────────────────────────────────── */
+  .rec-list { display: flex; flex-direction: column; gap: 10px; }
+  .rec {
+    border-radius: 10px;
+    padding: 10px 14px;
+    border-left: 3px solid var(--forest);
+    background: var(--slate50);
+  }
+  .rec-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .rec-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--forest); color: #fff;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rec-title { font-size: 11px; font-weight: 700; color: var(--slate900); }
+  .rec-body  { font-size: 11px; color: var(--slate500); line-height: 1.55; margin-left: 28px; }
+  .priority-tag {
+    margin-left: auto;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .p1 { background: #fee2e2; color: #991b1b; }
+  .p2 { background: #fef3c7; color: #92400e; }
+  .p3 { background: var(--slate100); color: var(--slate500); }
+
+  /* ── Coverage bar ────────────────────────────────────────────────────────── */
+  .cov-bar-wrap { background: var(--slate100); border-radius: 8px; height: 10px; overflow: hidden; margin: 6px 0; }
+  .cov-bar { height: 100%; border-radius: 8px; transition: width .4s; }
+
+  /* ── Cost mini bars ──────────────────────────────────────────────────────── */
+  .cost-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .cost-row-label { width: 90px; font-size: 11px; color: var(--slate500); flex-shrink: 0; }
+  .cost-row-bar-wrap { flex: 1; background: var(--slate100); border-radius: 4px; height: 8px; overflow: hidden; }
+  .cost-row-bar { height: 100%; border-radius: 4px; }
+  .cost-row-val { width: 70px; text-align: right; font-size: 11px; font-weight: 600; color: var(--slate700); flex-shrink: 0; }
+  .cost-row-pct { width: 46px; text-align: right; font-size: 10px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div>
+    <h1>Tech Licensing — Executive Performance Dashboard</h1>
+    <div class="sub">Jan – May 2026 YTD &nbsp;·&nbsp; Compared to same period 2025</div>
+    <div class="pills" style="margin-top:10px;">
+      <span class="pill"><span class="dot"></span>2026 YTD (Closed)</span>
+      <span class="pill amber">⚠ Jun 2026 MTD — excluded from comparison</span>
+      <span class="pill" style="margin-left:auto;opacity:.6;">Refreshed Jun 2026</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── KPI Strip ──────────────────────────────────────────────────────────── -->
+  <div>
+    <p class="section-label">Key Performance Indicators — Jan–May YTD</p>
+    <div class="kpi-grid">
+
+      <div class="kpi" style="--kpi-accent:#1B3A2C">
+        <span class="badge improve">+11.8%</span>
+        <div class="kpi-label">Booking</div>
+        <div class="kpi-val">1.95M</div>
+        <div class="kpi-prior">2025: 1.75M</div>
+        <div class="kpi-var up"><span class="arrow">↑</span>+206,717</div>
+      </div>
+
+      <div class="kpi" style="--kpi-accent:#2d7a4f">
+        <span class="badge strong">+33.6%</span>
+        <div class="kpi-label">Cashing</div>
+        <div class="kpi-val">1.32M</div>
+        <div class="kpi-prior">2025: 991K</div>
+        <div class="kpi-var up"><span class="arrow">↑</span>+332,769</div>
+      </div>
+
+      <div class="kpi" style="--kpi-accent:#dc2626">
+        <span class="badge watch">+37.1%</span>
+        <div class="kpi-label">COGS</div>
+        <div class="kpi-val">263K</div>
+        <div class="kpi-prior">2025: 192K</div>
+        <div class="kpi-var down"><span class="arrow">↑</span>+71,222</div>
+      </div>
+
+      <div class="kpi" style="--kpi-accent:#7c3aed">
+        <span class="badge stable">−2.4%</span>
+        <div class="kpi-label">Overheads</div>
+        <div class="kpi-val">1.40M</div>
+        <div class="kpi-prior">2025: 1.44M</div>
+        <div class="kpi-var up"><span class="arrow">↓</span>−33,931</div>
+      </div>
+
+      <div class="kpi" style="--kpi-accent:#ea580c">
+        <span class="badge stable">−2.5%</span>
+        <div class="kpi-label">Cash Coverage</div>
+        <div class="kpi-val">64.8%</div>
+        <div class="kpi-prior">2025: 49.1%</div>
+        <div class="kpi-var up"><span class="arrow">↑</span>+15.7 pts</div>
+      </div>
+
+      <div class="kpi" style="--kpi-accent:#dc2626">
+        <span class="badge improve">Narrowing</span>
+        <div class="kpi-label">Op. Result</div>
+        <div class="kpi-val" style="font-size:18px;">(90,103)</div>
+        <div class="kpi-prior">2025: (269,102)</div>
+        <div class="kpi-var up"><span class="arrow">↑</span>+178,999</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Charts Row 1: YTD Comparison + Waterfall ──────────────────────────── -->
+  <div class="col3">
+    <div class="card">
+      <div class="card-title">YTD Comparison — 2025 vs 2026</div>
+      <div class="card-sub">Jan–May · Absolute values (AED)</div>
+      <canvas id="ytdChart" height="200"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Profitability Bridge — 2026 YTD</div>
+      <div class="card-sub">Booking → Operating Result flow</div>
+      <canvas id="waterfallChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Charts Row 2: Monthly Trends ─────────────────────────────────────── -->
+  <div class="col22">
+    <div class="card">
+      <div class="card-title">Monthly Booking & Cashing</div>
+      <div class="card-sub">2025 (dashed) vs 2026 (solid)</div>
+      <canvas id="trendChart" height="180"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Cost & Operating Result</div>
+      <div class="card-sub">Total cost (bars) vs operating result (line) — 2026</div>
+      <canvas id="costChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- ── Cost Structure + Coverage ─────────────────────────────────────────── -->
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">Cost Structure — 2026 YTD</div>
+      <div class="card-sub">COGS · Overheads · Support Allocation</div>
+      <canvas id="donutChart" height="180"></canvas>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cost Component Comparison</div>
+      <div class="card-sub">2025 vs 2026 per category</div>
+
+      <div style="margin-top:4px;">
+        <div class="cost-row">
+          <div class="cost-row-label">COGS</div>
+          <div class="cost-row-bar-wrap">
+            <div class="cost-row-bar" style="width:100%;background:#fca5a5"></div>
+          </div>
+          <div class="cost-row-val">263K</div>
+          <div class="cost-row-pct neg">+37.1%</div>
+        </div>
+        <div class="cost-row" style="margin-top:-2px;margin-left:90px;padding-top:0;padding-bottom:8px;">
+          <div class="cost-row-bar-wrap">
+            <div class="cost-row-bar" style="width:73%;background:#ef4444"></div>
+          </div>
+          <div class="cost-row-val" style="color:#94a3b8">192K</div>
+          <div class="cost-row-pct" style="color:#94a3b8;font-size:9px">2025</div>
+        </div>
+
+        <div class="cost-row">
+          <div class="cost-row-label">Overheads</div>
+          <div class="cost-row-bar-wrap">
+            <div class="cost-row-bar" style="width:100%;background:#c4b5fd"></div>
+          </div>
+          <div class="cost-row-val">1,404K</div>
+          <div class="cost-row-pct pos">−2.4%</div>
+        </div>
+        <div class="cost-row" style="margin-top:-2px;margin-left:90px;padding-top:0;padding-bottom:8px;">
+          <div class="cost-row-bar-wrap">
+            <div class="cost-row-bar" style="width:102%;background:#7c3aed"></div>
+          </div>
+          <div class="cost-row-val" style="color:#94a3b8">1,438K</div>
+          <div class="cost-row-pct" style="color:#94a3b8;font-size:9px">2025</div>
+        </div>
+
+        <div class="cost-row">
+          <div class="cost-row-label">Support</div>
+          <div class="cost-row-bar-wrap">
+            <div class="cost-row-bar" style="width:98%;background:#fde68a"></div>
+          </div>
+          <div class="cost-row-val">378K</div>
+          <div class="cost-row-pct pos">−2.5%</div>
+        </div>
+        <div class="cost-row" style="margin-top:-2px;margin-left:90px;padding-top:0;">
+          <div class="cost-row-bar-wrap">
+            <div class="cost-row-bar" style="width:100%;background:#ca8a04"></div>
+          </div>
+          <div class="cost-row-val" style="color:#94a3b8">387K</div>
+          <div class="cost-row-pct" style="color:#94a3b8;font-size:9px">2025</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cash Coverage Ratio</div>
+      <div class="card-sub">Cashing ÷ Total Cost — how much of cost is cash-funded</div>
+      <div style="margin-top: 16px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:4px;">
+          <span style="color:var(--slate400)">2025</span>
+          <span style="color:var(--slate500)">49.1%</span>
+        </div>
+        <div class="cov-bar-wrap">
+          <div class="cov-bar" style="width:49.1%;background:var(--slate300, #cbd5e1)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:4px;margin-top:14px;">
+          <span style="color:var(--forest)">2026</span>
+          <span style="color:var(--forest);font-size:16px;font-weight:800">64.8%</span>
+        </div>
+        <div class="cov-bar-wrap" style="height:14px">
+          <div class="cov-bar" style="width:64.8%;background:var(--forest)"></div>
+        </div>
+        <div style="margin-top:12px;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#15803d;font-weight:600;">
+          ▲ +15.7 pts improvement — cash position strengthening
+        </div>
+
+        <div style="margin-top:10px;padding:10px 12px;background:var(--slate50);border:1px solid var(--slate200);border-radius:8px;">
+          <div style="font-size:10px;color:var(--slate400);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Booking-to-Cash Rate</div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+            <span style="color:var(--slate400)">2025</span><span>56.7%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--forest)">
+            <span>2026</span><span>67.7% <span style="font-size:10px;font-weight:500;color:var(--emerald)">▲ +11.0 pts</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Monthly Matrix ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Monthly Comparison Matrix — Booking</div>
+    <div class="card-sub">Month-by-month breakdown of booking performance</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>2025 Booking</th>
+          <th>2026 Booking</th>
+          <th>Variance</th>
+          <th>YoY %</th>
+          <th>2025 Cashing</th>
+          <th>2026 Cashing</th>
+          <th>Cash Δ</th>
+          <th>Op. Result '26</th>
+        </tr>
+      </thead>
+      <tbody id="matrixTable"></tbody>
+    </table>
+  </div>
+
+  <!-- ── Insights + Recommendations ────────────────────────────────────────── -->
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px">📊 Management Insights</div>
+      <div class="insight-list">
+        <div class="insight pos">
+          <div class="insight-icon">📈</div>
+          <div>
+            <div class="insight-title">Cashing outperforming booking growth</div>
+            <div class="insight-body">Booking grew +11.8% YoY to 1.95M, but cashing surged +33.6% to 1.32M — signalling materially stronger collection discipline in 2026. The B2C conversion rate improved from 56.7% to 67.7% (+11 pts).</div>
+          </div>
+        </div>
+        <div class="insight pos">
+          <div class="insight-icon">✅</div>
+          <div>
+            <div class="insight-title">Profitability recovery on track</div>
+            <div class="insight-body">Operating loss narrowed from (269,102) in 2025 to (90,103) in 2026 — a 179K improvement. The business needs ~18K/month more in net booking to reach break-even at current cost levels.</div>
+          </div>
+        </div>
+        <div class="insight neg">
+          <div class="insight-icon">⚠️</div>
+          <div>
+            <div class="insight-title">COGS spike requires investigation</div>
+            <div class="insight-body">COGS increased +37.1% YoY to 263K — far outpacing booking growth of 11.8%. This is the single largest cost risk in the period. The driver must be identified before H2 budget is set.</div>
+          </div>
+        </div>
+        <div class="insight pos">
+          <div class="insight-icon">💡</div>
+          <div>
+            <div class="insight-title">Overhead & support discipline maintained</div>
+            <div class="insight-body">Overheads fell −2.4% and support fell −2.5% YoY — both declined while revenue grew. This is a genuine efficiency signal that needs to be protected as the business scales into H2.</div>
+          </div>
+        </div>
+        <div class="insight warn">
+          <div class="insight-icon">📅</div>
+          <div>
+            <div class="insight-title">March was the standout month</div>
+            <div class="insight-body">March 2026 delivered 784K in booking — the strongest commercial month in the window. Jan (182K) and May (191K) both significantly underperformed vs their 2025 counterparts.</div>
+          </div>
+        </div>
+        <div class="insight info">
+          <div class="insight-icon">💰</div>
+          <div>
+            <div class="insight-title">630K in receivables outstanding</div>
+            <div class="insight-body">Booking-to-cash gap stands at ~630K. At current cashing momentum, this is recoverable — but collections must be a daily management priority through Q3 to avoid a year-end shortfall.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:12px">🎯 Management Recommendations</div>
+      <div class="rec-list">
+        <div class="rec">
+          <div class="rec-header">
+            <div class="rec-num">1</div>
+            <div class="rec-title">Investigate the COGS spike immediately</div>
+            <div class="priority-tag p1">High Priority</div>
+          </div>
+          <div class="rec-body">COGS grew +37.1% while booking grew +11.8%. Before closing H1, identify whether this is a vendor price increase, volume-driven, or a data anomaly. Set a COGS-to-Booking ceiling (target: &lt;15%) for H2.</div>
+        </div>
+        <div class="rec">
+          <div class="rec-header">
+            <div class="rec-num">2</div>
+            <div class="rec-title">Set a formal monthly break-even booking floor</div>
+            <div class="priority-tag p1">High Priority</div>
+          </div>
+          <div class="rec-body">Average monthly cost is ~409K. The business is ~18K/month short of break-even. Formalise a monthly booking floor of 430K and track weekly in the sales dashboard.</div>
+        </div>
+        <div class="rec">
+          <div class="rec-header">
+            <div class="rec-num">3</div>
+            <div class="rec-title">Accelerate the 630K receivables backlog</div>
+            <div class="priority-tag p2">Medium</div>
+          </div>
+          <div class="rec-body">B2C is improving (67.7%) but the absolute gap is still large. Implement bi-weekly collections review calls, prioritise accounts &gt;60 days, and set a Q3 target of 75%+ B2C conversion.</div>
+        </div>
+        <div class="rec">
+          <div class="rec-header">
+            <div class="rec-num">4</div>
+            <div class="rec-title">Replicate March 2026 pipeline conditions in H2</div>
+            <div class="priority-tag p2">Medium</div>
+          </div>
+          <div class="rec-body">March delivered 784K in booking — 2.5× the weakest month. Analyse the deal mix, source, and rep activity in March and build a playbook to repeat it systematically in Q3 and Q4.</div>
+        </div>
+        <div class="rec">
+          <div class="rec-header">
+            <div class="rec-num">5</div>
+            <div class="rec-title">Protect the overhead efficiency gains</div>
+            <div class="priority-tag p3">Low</div>
+          </div>
+          <div class="rec-body">Both overheads and support declined YoY — a real efficiency win. Resist headcount or fixed cost increases until the business reaches break-even. Every 10K saved in overhead is 10K closer to profitability.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── Real data ────────────────────────────────────────────────────────────────
+const months = ['Jan','Feb','Mar','Apr','May']
+
+const booking25 = [446994, 382567, 529957, 145050, 243651]
+const booking26 = [182492, 452447, 784196, 344692, 191109]
+const cashing25 = [196438, 362979, 224162,  94105, 113605]
+const cashing26 = [354859, 329221, 394184, 129784, 116010]
+const cogs25    = [ 34961,  39779,  36341,  38134,  42895]
+const cogs26    = [ 57729,  52529,  51201,  49935,  51938]
+const overhead25= [277083, 263566, 270270, 300103, 326874]
+const overhead26= [297510, 291059, 286324, 268065, 261007]
+const support25 = [ 76884,  77707,  77600,  79534,  75590]
+const support26 = [ 80724,  80099,  74743,  69788,  72388]
+
+const totalCost26 = cogs26.map((_,i) => cogs26[i] + overhead26[i] + support26[i])
+const opResult26  = booking26.map((_,i) => booking26[i] - totalCost26[i])
+
+function K(v)  { return (v/1000).toFixed(0)+'K' }
+function M(v)  { return (v/1000000).toFixed(2)+'M' }
+function fmtv(v) { return v >= 1e6 ? M(v) : v >= 1e4 ? K(v) : v.toLocaleString() }
+function pct(a,b) { return b === 0 ? '—' : ((a-b)/Math.abs(b)*100).toFixed(1)+'%' }
+function delta(v) { return v >= 0 ? '+'+fmtv(v) : '('+fmtv(Math.abs(v))+')' }
+
+const cdef = {
+  color: '#334155',
+  borderColor: '#e2e8f0',
+  plugins: { legend: { labels: { font: { size: 10 }, color: '#64748b', boxWidth: 10 } } },
+  elements: { bar: { borderRadius: 5 }, line: { tension: 0.35 } },
+  animation: { duration: 600, easing: 'easeOutQuart' },
+}
+
+// ── 1. YTD Comparison ────────────────────────────────────────────────────────
+new Chart(document.getElementById('ytdChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Booking','Cashing','COGS','Overheads','Support'],
+    datasets: [
+      { label: '2025', data: [1748219,991289,192110,1437896,387315],
+        backgroundColor: '#cbd5e1', borderRadius: 5 },
+      { label: '2026', data: [1954936,1324058,263332,1403965,377742],
+        backgroundColor: ['#1B3A2C','#2d7a4f','#ef4444','#7c3aed','#ca8a04'],
+        borderRadius: 5 },
+    ]
+  },
+  options: {
+    ...cdef,
+    plugins: { ...cdef.plugins },
+    scales: {
+      y: { ticks: { callback: v => v>=1e6?M(v):K(v), font:{size:9}, color:'#94a3b8' }, grid:{color:'#f1f5f9'}, border:{display:false} },
+      x: { ticks: { font:{size:10}, color:'#64748b' }, grid:{display:false}, border:{display:false} }
+    }
+  }
+})
+
+// ── 2. Waterfall (bridge) ────────────────────────────────────────────────────
+const wfLabels  = ['Booking','COGS','Overheads','Support','Op. Result']
+const wfBases   = [0, 1954936, 1954936-263332, 1954936-263332-1403965, 0]
+const wfVals    = [1954936, 263332, 1403965, 377742, 90103]
+const wfColors  = ['#1B3A2C','#ef4444','#7c3aed','#ca8a04','#dc2626']
+// wfBase + wfVals stacked; base is transparent
+new Chart(document.getElementById('waterfallChart'), {
+  type: 'bar',
+  data: {
+    labels: wfLabels,
+    datasets: [
+      { label: '', data: wfBases, backgroundColor: 'transparent', stack: 'a' },
+      { label: 'Value', data: wfVals, backgroundColor: wfColors, stack: 'a', borderRadius: 5 }
+    ]
+  },
+  options: {
+    ...cdef,
+    plugins: { legend: { display: false }, tooltip: {
+      callbacks: {
+        label: ctx => ctx.datasetIndex === 0 ? null : (ctx.dataIndex === 4 ? '('+K(ctx.raw)+')' : K(ctx.raw))
+      }
+    }},
+    scales: {
+      y: { stacked: true, ticks: { callback: v => K(v), font:{size:9}, color:'#94a3b8' }, grid:{color:'#f1f5f9'}, border:{display:false} },
+      x: { stacked: true, ticks:{font:{size:10},color:'#64748b'}, grid:{display:false}, border:{display:false} }
+    }
+  }
+})
+
+// ── 3. Monthly trend ─────────────────────────────────────────────────────────
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label:'Booking 2025', data: booking25, borderColor:'#94a3b8', borderWidth:1.5, borderDash:[5,3], pointRadius:0, fill:false },
+      { label:'Cashing 2025', data: cashing25, borderColor:'#cbd5e1', borderWidth:1.5, borderDash:[5,3], pointRadius:0, fill:false },
+      { label:'Booking 2026', data: booking26, borderColor:'#1B3A2C', borderWidth:2.5, pointBackgroundColor:'#1B3A2C', pointRadius:4, fill:false },
+      { label:'Cashing 2026', data: cashing26, borderColor:'#2d7a4f', borderWidth:2.5, pointBackgroundColor:'#2d7a4f', pointRadius:4, fill:false },
+    ]
+  },
+  options: {
+    ...cdef,
+    plugins: { ...cdef.plugins, legend: { labels:{font:{size:9},color:'#64748b',boxWidth:18} } },
+    scales: {
+      y: { ticks:{callback:v=>K(v),font:{size:9},color:'#94a3b8'},grid:{color:'#f1f5f9'},border:{display:false}},
+      x: { ticks:{font:{size:10},color:'#64748b'},grid:{display:false},border:{display:false}}
+    }
+  }
+})
+
+// ── 4. Cost + Op Result ───────────────────────────────────────────────────────
+new Chart(document.getElementById('costChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      { type:'bar',  label:'Total Cost 2026', data: totalCost26, backgroundColor:'rgba(124,58,237,.55)', borderRadius:5, yAxisID:'y' },
+      { type:'line', label:'Op. Result 2026', data: opResult26, borderColor:'#dc2626', borderWidth:2.5, pointBackgroundColor:'#dc2626', pointRadius:4, fill:false, yAxisID:'y' },
+    ]
+  },
+  options: {
+    ...cdef,
+    plugins: { ...cdef.plugins, legend: { labels:{font:{size:9},color:'#64748b',boxWidth:10} } },
+    scales: {
+      y: { ticks:{callback:v=>K(v),font:{size:9},color:'#94a3b8'},grid:{color:'#f1f5f9'},border:{display:false}},
+      x: { ticks:{font:{size:10},color:'#64748b'},grid:{display:false},border:{display:false}}
+    }
+  }
+})
+
+// ── 5. Donut — cost structure ─────────────────────────────────────────────────
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['COGS (12.9%)', 'Overheads (68.6%)', 'Support (18.5%)'],
+    datasets: [{
+      data: [263332, 1403965, 377742],
+      backgroundColor: ['#ef4444','#7c3aed','#ca8a04'],
+      borderWidth: 0,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    ...cdef,
+    cutout: '66%',
+    plugins: {
+      legend: { position:'bottom', labels:{font:{size:10},color:'#64748b',boxWidth:10,padding:12} },
+      tooltip: { callbacks: { label: ctx => ' '+K(ctx.raw) } }
+    }
+  }
+})
+
+// ── Monthly Matrix ────────────────────────────────────────────────────────────
+const tbody = document.getElementById('matrixTable')
+for (let i = 0; i < 5; i++) {
+  const bkVar   = booking26[i] - booking25[i]
+  const csVar   = cashing26[i] - cashing25[i]
+  const tc      = totalCost26[i]
+  const op      = opResult26[i]
+  const bkPct   = ((booking26[i]-booking25[i])/booking25[i]*100).toFixed(1)
+  const bkCls   = bkVar >= 0 ? 'pos' : 'neg'
+  const pctCls  = parseFloat(bkPct) >= 0 ? 'pos' : 'neg'
+  const opCls   = op >= 0 ? 'pos bold' : 'neg bold'
+  tbody.innerHTML += `<tr>
+    <td class="month-label">${months[i]}</td>
+    <td>${booking25[i].toLocaleString()}</td>
+    <td class="bold">${booking26[i].toLocaleString()}</td>
+    <td class="${bkCls}">${delta(bkVar)}</td>
+    <td class="${pctCls}">${bkPct >= 0 ? '+' : ''}${bkPct}%</td>
+    <td>${cashing25[i].toLocaleString()}</td>
+    <td class="bold">${cashing26[i].toLocaleString()}</td>
+    <td class="${csVar>=0?'pos':'neg'}">${delta(csVar)}</td>
+    <td class="${opCls}">${op >= 0 ? '+'+fmtv(op) : '('+fmtv(Math.abs(op))+')'}</td>
+  </tr>`
+}
+// Totals row
+const totals = {
+  b25: booking25.reduce((a,b)=>a+b), b26: booking26.reduce((a,b)=>a+b),
+  c25: cashing25.reduce((a,b)=>a+b), c26: cashing26.reduce((a,b)=>a+b),
+  op: opResult26.reduce((a,b)=>a+b)
+}
+const bkTotVar = totals.b26 - totals.b25
+tbody.innerHTML += `<tr style="background:#f8fafc;font-weight:700;border-top:2px solid #e2e8f0">
+  <td style="color:#1B3A2C;font-weight:800">YTD Total</td>
+  <td>${totals.b25.toLocaleString()}</td>
+  <td class="bold">${totals.b26.toLocaleString()}</td>
+  <td class="${bkTotVar>=0?'pos':'neg'}">${delta(bkTotVar)}</td>
+  <td class="${bkTotVar>=0?'pos':'neg'}">+11.8%</td>
+  <td>${totals.c25.toLocaleString()}</td>
+  <td class="bold">${totals.c26.toLocaleString()}</td>
+  <td class="pos">+332,769</td>
+  <td class="neg bold">(90,103)</td>
+</tr>`
+</script>
+</body>
+</html>
