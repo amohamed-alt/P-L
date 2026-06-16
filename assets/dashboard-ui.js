@@ -24,8 +24,8 @@ function populateFilters() {
 function renderHeader() {
   const { prior, current } = selectedYears();
   byId('dashboardTitle').textContent = CONFIG.title;
-  byId('dashboardSubtitle').textContent = `${prior} vs ${current} · ${periodLabel()} comparison`;
-  byId('periodPill').innerHTML = `<span class="dot"></span>${periodLabel()} · ${prior} vs ${current}`;
+  byId('dashboardSubtitle').textContent = `${prior} baseline vs ${current} comparison · ${periodLabel()}`;
+  byId('periodPill').innerHTML = `<span class="dot"></span>${periodLabel()} · ${prior} → ${current}`;
 
   const partialPill = byId('partialPill');
   const partialIndexes = parsedData.partial[String(current)] || [];
@@ -45,28 +45,38 @@ function renderFilterSummary() {
     closed: 'closed months only',
     custom: 'custom range'
   }[byId('comparisonMode').value];
-  const context = byId('fullYearContext').checked ? 'Full-year 2025 context is visible in charts and table.' : 'Only the selected months are displayed.';
-  byId('filterSummary').textContent = `${prior} vs ${current} · ${periodLabel()} · ${modeText}. ${context}`;
+  const context = byId('fullYearContext').checked
+    ? `Full ${prior} context is visible in charts and the table.`
+    : 'Only the selected months are displayed.';
+
+  byId('fullYearContextLabel').textContent = `Show full ${prior} context through December`;
+  byId('filterSummary').textContent = `${prior} baseline → ${current} comparison · ${periodLabel()} · ${modeText}. ${context}`;
 }
 
 function renderDataQuality() {
   const banner = byId('statusBanner');
   const warnings = [...parsedData.warnings];
-  const { current } = selectedYears();
+  const { prior, current } = selectedYears();
+  const indexes = periodIndexes();
   const partialIndexes = parsedData.partial[String(current)] || [];
   const partialIndex = partialIndexes.findIndex(Boolean);
 
   if (partialIndex >= 0) {
-    if (byId('includePartial').checked && periodIndexes().includes(partialIndex)) {
+    if (byId('includePartial').checked && indexes.includes(partialIndex)) {
       warnings.unshift(`${parsedData.months[partialIndex]} ${current} is shown as MTD. Its cost values are incomplete, so cost, operating-result, and coverage metrics may be temporarily distorted.`);
     } else {
       warnings.unshift(`${parsedData.months[partialIndex]} ${current} is available as MTD but excluded from the selected comparison.`);
     }
   }
 
-  const missingSelectedMonths = periodIndexes().filter((index) => !monthHasData(current, index));
-  if (missingSelectedMonths.length) {
-    warnings.push(`${missingSelectedMonths.map((index) => parsedData.months[index]).join(', ')} has no ${current} data and is treated as unavailable, not as confirmed zero performance.`);
+  const missingBaselineMonths = indexes.filter((index) => !monthHasData(prior, index));
+  const missingComparisonMonths = indexes.filter((index) => !monthHasData(current, index));
+
+  if (missingBaselineMonths.length) {
+    warnings.push(`${prior} has no data for ${missingBaselineMonths.map((index) => parsedData.months[index]).join(', ')}.`);
+  }
+  if (missingComparisonMonths.length) {
+    warnings.push(`${current} has no data for ${missingComparisonMonths.map((index) => parsedData.months[index]).join(', ')}. These months are shown as unavailable, not as confirmed zero performance.`);
   }
 
   const generatedAt = parsedData.metadata?.generatedAt
@@ -98,13 +108,40 @@ function renderKpis(snapshot) {
   const focusedMetric = byId('metricFocus').value;
 
   byId('kpiGrid').innerHTML = definitions.map((definition) => {
+    const isFocused = focusedMetric === definition.key || (focusedMetric === 'commercial' && ['booking', 'cashing'].includes(definition.key));
+
+    if (!current.hasData) {
+      return `
+        <article class="kpi no-data ${isFocused ? 'is-focused' : ''}" style="--kpi-accent:${definition.accent}">
+          <span class="badge stable">No data</span>
+          <div class="kpi-label">${definition.label}</div>
+          <div class="kpi-val">—</div>
+          <div class="kpi-prior">${snapshot.currentYear}: unavailable for ${periodLabel()}</div>
+          <div class="kpi-var neutral">Select an available month</div>
+        </article>`;
+    }
+
     const currentValue = current[definition.key];
     const priorValue = prior[definition.key];
-    const variance = getVariance(currentValue, priorValue);
-    const status = statusFor(definition.key, currentValue, priorValue);
     const isRatio = definition.kind === 'ratio';
     const displayCurrent = isRatio ? formatPercent(currentValue) : formatCompact(currentValue, 2, { currency: true });
-    const displayPrior = isRatio ? formatPercent(priorValue) : formatCompact(priorValue, 2, { currency: true });
+    const displayPrior = prior.hasData
+      ? isRatio ? formatPercent(priorValue) : formatCompact(priorValue, 2, { currency: true })
+      : 'No baseline';
+
+    if (!prior.hasData) {
+      return `
+        <article class="kpi ${isFocused ? 'is-focused' : ''}" style="--kpi-accent:${definition.accent}">
+          <span class="badge stable">No comparison</span>
+          <div class="kpi-label">${definition.label}</div>
+          <div class="kpi-val">${displayCurrent}</div>
+          <div class="kpi-prior">${snapshot.priorYear}: ${displayPrior}</div>
+          <div class="kpi-var neutral">Baseline period unavailable</div>
+        </article>`;
+    }
+
+    const variance = getVariance(currentValue, priorValue);
+    const status = statusFor(definition.key, currentValue, priorValue);
     const varianceText = isRatio ? formatPoints(variance.absolute) : signedCompact(variance.absolute);
     const directionClass = status.positive ? 'up' : 'down';
     const arrow = variance.absolute >= 0 ? '↑' : '↓';
@@ -113,14 +150,17 @@ function renderKpis(snapshot) {
       : variance.percent === null
         ? status.label
         : `${variance.percent >= 0 ? '+' : ''}${formatPercent(variance.percent)}`;
-    const isFocused = focusedMetric === definition.key || (focusedMetric === 'commercial' && ['booking', 'cashing'].includes(definition.key));
+
+    const availabilityNote = current.completeForPeriod && prior.completeForPeriod
+      ? ''
+      : `<span class="data-availability-note">${current.availableMonthCount}/${current.requestedMonthCount} comparison months available</span>`;
 
     return `
       <article class="kpi ${isFocused ? 'is-focused' : ''}" style="--kpi-accent:${definition.accent}">
         <span class="badge ${status.className}">${badgeText}</span>
         <div class="kpi-label">${definition.label}</div>
         <div class="kpi-val">${displayCurrent}</div>
-        <div class="kpi-prior">${snapshot.priorYear}: ${displayPrior}</div>
+        <div class="kpi-prior">${snapshot.priorYear}: ${displayPrior}${availabilityNote}</div>
         <div class="kpi-var ${directionClass}"><span>${arrow}</span>${varianceText}</div>
       </article>`;
   }).join('');
