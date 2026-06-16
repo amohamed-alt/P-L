@@ -1,101 +1,131 @@
-    function renderCoverage(snapshot) {
-      const current = snapshot.years[2026];
-      const prior = snapshot.years[2025];
-      const coverageDelta = current.cashCoverage !== null && prior.cashCoverage !== null ? current.cashCoverage - prior.cashCoverage : null;
-      const conversionDelta = current.bookingToCash !== null && prior.bookingToCash !== null ? current.bookingToCash - prior.bookingToCash : null;
-      const messageClass = coverageDelta !== null && coverageDelta >= 0 ? 'pos' : 'warn';
-      const message = coverageDelta === null
-        ? 'Coverage comparison is unavailable because a denominator is zero.'
-        : `${coverageDelta >= 0 ? '▲' : '▼'} ${formatPoints(coverageDelta)} ${coverageDelta >= 0 ? 'improvement' : 'decline'} in cash coverage.`;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tech Licensing executive performance dashboard comparing 2025 and 2026.">
+  <title>Tech Licensing — Executive Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="./config.js"></script>
+  <link rel="stylesheet" href="./assets/dashboard.css">
+</head>
+<body>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-card">Loading dashboard data…</div>
+  </div>
 
-      byId('coveragePanel').innerHTML = `
-        <div class="coverage-header"><span style="color:var(--slate400)">2025 Cash Coverage</span><strong>${formatPercent(prior.cashCoverage)}</strong></div>
-        <div class="cov-bar-wrap"><div class="cov-bar" style="width:${Math.max(0, Math.min(100, (prior.cashCoverage || 0) * 100))}%;background:var(--slate300)"></div></div>
-        <div class="coverage-header" style="margin-top:15px"><span style="color:var(--forest)">2026 Cash Coverage</span><strong style="font-size:17px;color:var(--forest)">${formatPercent(current.cashCoverage)}</strong></div>
-        <div class="cov-bar-wrap" style="height:14px"><div class="cov-bar" style="width:${Math.max(0, Math.min(100, (current.cashCoverage || 0) * 100))}%;background:var(--forest)"></div></div>
-        <div class="coverage-message ${messageClass}">${message}</div>
-        <div style="margin-top:11px;padding:11px 12px;background:var(--slate50);border:1px solid var(--slate200);border-radius:8px">
-          <div style="font-size:10px;color:var(--slate400);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">Booking-to-Cash Conversion</div>
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--slate400)">2025</span><strong>${formatPercent(prior.bookingToCash)}</strong></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:800;color:var(--forest)"><span>2026</span><span>${formatPercent(current.bookingToCash)} <small style="font-size:10px;color:${conversionDelta >= 0 ? 'var(--emerald)' : 'var(--red)'}">${formatPoints(conversionDelta)}</small></span></div>
-        </div>`;
-    }
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1 id="dashboardTitle">Tech Licensing — Executive Performance Dashboard</h1>
+        <div id="dashboardSubtitle" class="sub">2025 vs 2026</div>
+      </div>
+      <div class="header-meta">
+        <span id="periodPill" class="pill"><span class="dot"></span>Loading period…</span>
+        <span id="partialPill" class="pill amber" hidden></span>
+        <label id="partialToggleWrap" class="pill toggle-wrap" hidden>
+          <input id="includePartial" type="checkbox">
+          Include partial month
+        </label>
+        <button id="refreshButton" class="header-button" type="button">Refresh data</button>
+        <button id="printButton" class="header-button" type="button">Print / PDF</button>
+      </div>
+    </div>
+  </header>
 
-    function renderMatrix(snapshot) {
-      const tbody = byId('matrixTable');
-      const indexes = snapshot.indexes;
-      const booking25 = getMetricSeries('booking', 2025);
-      const booking26 = getMetricSeries('booking', 2026);
-      const cashing25 = getMetricSeries('cashing', 2025);
-      const cashing26 = getMetricSeries('cashing', 2026);
-      const cogs26 = getMetricSeries('cogs', 2026);
-      const overheads26 = getMetricSeries('overheads', 2026);
-      const support26 = getMetricSeries('support', 2026);
+  <main>
+    <div id="statusBanner" class="status-banner"></div>
 
-      const rows = indexes.map((index) => {
-        const bookingVariance = booking26[index] - booking25[index];
-        const bookingYoY = booking25[index] ? bookingVariance / Math.abs(booking25[index]) : null;
-        const cashVariance = cashing26[index] - cashing25[index];
-        const totalCost = cogs26[index] + overheads26[index] + support26[index];
-        const operatingResult = booking26[index] - totalCost;
-        const isPartial = index === partialMonthIndex;
-        return `
-          <tr>
-            <td class="month-label">${parsedData.months[index]}${isPartial ? ' <span class="badge watch" style="float:none">MTD</span>' : ''}</td>
-            <td>${formatFull(booking25[index])}</td>
-            <td class="bold">${formatFull(booking26[index])}</td>
-            <td class="${bookingVariance >= 0 ? 'pos' : 'neg'}">${signedCompact(bookingVariance)}</td>
-            <td class="${bookingYoY !== null && bookingYoY >= 0 ? 'pos' : 'neg'}">${bookingYoY === null ? '—' : `${bookingYoY >= 0 ? '+' : ''}${formatPercent(bookingYoY)}`}</td>
-            <td>${formatFull(cashing25[index])}</td>
-            <td class="bold">${formatFull(cashing26[index])}</td>
-            <td class="${cashVariance >= 0 ? 'pos' : 'neg'}">${signedCompact(cashVariance)}</td>
-            <td>${formatFull(totalCost)}</td>
-            <td class="${operatingResult >= 0 ? 'pos' : 'neg'} bold">${formatFull(operatingResult)}</td>
-          </tr>`;
-      });
+    <section>
+      <p class="section-label">Key Performance Indicators</p>
+      <div id="kpiGrid" class="kpi-grid"></div>
+    </section>
 
-      const current = snapshot.years[2026];
-      const prior = snapshot.years[2025];
-      const bookingVariance = current.booking - prior.booking;
-      const bookingYoY = prior.booking ? bookingVariance / Math.abs(prior.booking) : null;
-      const cashVariance = current.cashing - prior.cashing;
-      rows.push(`
-        <tr style="background:#f8fafc;font-weight:800;border-top:2px solid #e2e8f0">
-          <td style="color:var(--forest)">YTD Total</td>
-          <td>${formatFull(prior.booking)}</td>
-          <td class="bold">${formatFull(current.booking)}</td>
-          <td class="${bookingVariance >= 0 ? 'pos' : 'neg'}">${signedCompact(bookingVariance)}</td>
-          <td class="${bookingYoY !== null && bookingYoY >= 0 ? 'pos' : 'neg'}">${bookingYoY === null ? '—' : `${bookingYoY >= 0 ? '+' : ''}${formatPercent(bookingYoY)}`}</td>
-          <td>${formatFull(prior.cashing)}</td>
-          <td class="bold">${formatFull(current.cashing)}</td>
-          <td class="${cashVariance >= 0 ? 'pos' : 'neg'}">${signedCompact(cashVariance)}</td>
-          <td>${formatFull(current.totalCost)}</td>
-          <td class="${current.operatingResult >= 0 ? 'pos' : 'neg'} bold">${formatFull(current.operatingResult)}</td>
-        </tr>`);
+    <section class="col3">
+      <div class="card">
+        <div class="card-title">YTD Comparison — 2025 vs 2026</div>
+        <div id="ytdSubtitle" class="card-sub">Equivalent period comparison</div>
+        <div class="chart-wrap"><canvas id="ytdChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Profitability Bridge — 2026</div>
+        <div id="waterfallSubtitle" class="card-sub">Booking → Operating Result</div>
+        <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
+      </div>
+    </section>
 
-      tbody.innerHTML = rows.join('');
-      byId('matrixSubtitle').textContent = `${periodLabel()} equivalent-period comparison${byId('includePartial').checked ? ' including partial month' : ''}`;
-    }
+    <section class="col22">
+      <div class="card">
+        <div class="card-title">Monthly Booking & Cashing</div>
+        <div class="card-sub">2025 dashed · 2026 solid</div>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Cost & Operating Result</div>
+        <div class="card-sub">Total cost bars · operating result line</div>
+        <div class="chart-wrap"><canvas id="costChart"></canvas></div>
+      </div>
+    </section>
 
-    function monthlyRecords(indexes) {
-      const booking25 = getMetricSeries('booking', 2025);
-      const booking26 = getMetricSeries('booking', 2026);
-      const cashing26 = getMetricSeries('cashing', 2026);
-      const cogs26 = getMetricSeries('cogs', 2026);
-      const overheads26 = getMetricSeries('overheads', 2026);
-      const support26 = getMetricSeries('support', 2026);
-      return indexes.map((index) => {
-        const totalCost = cogs26[index] + overheads26[index] + support26[index];
-        return {
-          index,
-          month: parsedData.months[index],
-          booking25: booking25[index],
-          booking26: booking26[index],
-          cashing26: cashing26[index],
-          cogs26: cogs26[index],
-          totalCost,
-          operatingResult: booking26[index] - totalCost
-        };
-      });
-    }
+    <section class="grid3">
+      <div class="card">
+        <div class="card-title">Cost Structure — 2026</div>
+        <div class="card-sub">COGS · Overheads · Support Allocation</div>
+        <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
+      </div>
 
+      <div class="card">
+        <div class="card-title">Cost Component Comparison</div>
+        <div class="card-sub">Same-period 2025 vs 2026</div>
+        <div class="chart-wrap"><canvas id="costComparisonChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Cash Coverage & Conversion</div>
+        <div class="card-sub">Cashing ÷ cost and cashing ÷ booking</div>
+        <div id="coveragePanel" class="coverage-section"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Monthly Comparison Matrix</div>
+      <div id="matrixSubtitle" class="card-sub">Month-by-month commercial and profitability performance</div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>2025 Booking</th>
+              <th>2026 Booking</th>
+              <th>Booking Δ</th>
+              <th>Booking YoY</th>
+              <th>2025 Cashing</th>
+              <th>2026 Cashing</th>
+              <th>Cash Δ</th>
+              <th>2026 Total Cost</th>
+              <th>2026 Op. Result</th>
+            </tr>
+          </thead>
+          <tbody id="matrixTable"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid2">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Management Insights</div>
+        <div id="insightList" class="insight-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:12px">Management Recommendations</div>
+        <div id="recommendationList" class="rec-list"></div>
+      </div>
+    </section>
+  </main>
+  <script src="./assets/dashboard-core.js"></script>
+  <script src="./assets/dashboard-ui.js"></script>
+  <script src="./assets/dashboard-charts.js"></script>
+  <script src="./assets/dashboard-tables.js"></script>
+  <script src="./assets/dashboard-insights-init.js"></script>
+</body>
+</html>
