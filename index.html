@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Tech Licensing executive performance dashboard comparing 2025 and 2026.">
+  <meta name="description" content="Tech Licensing executive performance dashboard comparing reporting periods.">
   <title>Tech Licensing — Executive Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="./config.js"></script>
@@ -11,22 +11,18 @@
 </head>
 <body>
   <div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-card">Loading dashboard data…</div>
+    <div class="loading-card">Loading the latest dashboard data…</div>
   </div>
 
   <header>
     <div class="header-inner">
       <div>
         <h1 id="dashboardTitle">Tech Licensing — Executive Performance Dashboard</h1>
-        <div id="dashboardSubtitle" class="sub">2025 vs 2026</div>
+        <div id="dashboardSubtitle" class="sub">Flexible 2025 vs 2026 reporting comparison</div>
       </div>
       <div class="header-meta">
         <span id="periodPill" class="pill"><span class="dot"></span>Loading period…</span>
         <span id="partialPill" class="pill amber" hidden></span>
-        <label id="partialToggleWrap" class="pill toggle-wrap" hidden>
-          <input id="includePartial" type="checkbox">
-          Include partial month
-        </label>
         <button id="refreshButton" class="header-button" type="button">Refresh data</button>
         <button id="printButton" class="header-button" type="button">Print / PDF</button>
       </div>
@@ -36,6 +32,70 @@
   <main>
     <div id="statusBanner" class="status-banner"></div>
 
+    <section class="filter-card" aria-label="Dashboard filters">
+      <div class="filter-heading">
+        <div>
+          <div class="card-title">Comparison controls</div>
+          <div id="filterSummary" class="card-sub">Choose the exact years and months you want to review.</div>
+        </div>
+        <button id="resetFilters" class="secondary-button" type="button">Reset filters</button>
+      </div>
+
+      <div class="filter-grid">
+        <label class="filter-field">
+          <span>Base year</span>
+          <select id="priorYear"></select>
+        </label>
+
+        <label class="filter-field">
+          <span>Compare with</span>
+          <select id="currentYear"></select>
+        </label>
+
+        <label class="filter-field">
+          <span>Comparison basis</span>
+          <select id="comparisonMode">
+            <option value="available">Available YTD including current month</option>
+            <option value="closed">Closed months only</option>
+            <option value="custom">Custom month range</option>
+          </select>
+        </label>
+
+        <label class="filter-field">
+          <span>Start month</span>
+          <select id="startMonth"></select>
+        </label>
+
+        <label class="filter-field">
+          <span>End month</span>
+          <select id="endMonth"></select>
+        </label>
+
+        <label class="filter-field">
+          <span>Monthly chart focus</span>
+          <select id="metricFocus">
+            <option value="commercial">Booking & Cashing</option>
+            <option value="booking">Booking</option>
+            <option value="cashing">Cashing</option>
+            <option value="totalCost">Total Cost</option>
+            <option value="operatingResult">Operating Result</option>
+            <option value="cashCoverage">Cash Coverage</option>
+            <option value="bookingToCash">Booking-to-Cash</option>
+          </select>
+        </label>
+
+        <label class="filter-check">
+          <input id="includePartial" type="checkbox" checked>
+          <span>Include current partial month</span>
+        </label>
+
+        <label class="filter-check">
+          <input id="fullYearContext" type="checkbox" checked>
+          <span>Show full 2025 context through December</span>
+        </label>
+      </div>
+    </section>
+
     <section>
       <p class="section-label">Key Performance Indicators</p>
       <div id="kpiGrid" class="kpi-grid"></div>
@@ -43,12 +103,12 @@
 
     <section class="col3">
       <div class="card">
-        <div class="card-title">YTD Comparison — 2025 vs 2026</div>
+        <div id="ytdTitle" class="card-title">Period Comparison</div>
         <div id="ytdSubtitle" class="card-sub">Equivalent period comparison</div>
         <div class="chart-wrap"><canvas id="ytdChart"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title">Profitability Bridge — 2026</div>
+        <div id="waterfallTitle" class="card-title">Profitability Bridge</div>
         <div id="waterfallSubtitle" class="card-sub">Booking → Operating Result</div>
         <div class="chart-wrap"><canvas id="waterfallChart"></canvas></div>
       </div>
@@ -56,54 +116,54 @@
 
     <section class="col22">
       <div class="card">
-        <div class="card-title">Monthly Booking & Cashing</div>
-        <div class="card-sub">2025 dashed · 2026 solid</div>
-        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+        <div id="trendTitle" class="card-title">Monthly Performance</div>
+        <div id="trendSubtitle" class="card-sub">Full-year context with missing future months left blank</div>
+        <div class="chart-wrap chart-wrap-large"><canvas id="trendChart"></canvas></div>
       </div>
       <div class="card">
-        <div class="card-title">Cost & Operating Result</div>
-        <div class="card-sub">Total cost bars · operating result line</div>
-        <div class="chart-wrap"><canvas id="costChart"></canvas></div>
+        <div id="costTitle" class="card-title">Cost & Operating Result</div>
+        <div id="costSubtitle" class="card-sub">Both years shown across the selected display range</div>
+        <div class="chart-wrap chart-wrap-large"><canvas id="costChart"></canvas></div>
       </div>
     </section>
 
     <section class="grid3">
       <div class="card">
-        <div class="card-title">Cost Structure — 2026</div>
-        <div class="card-sub">COGS · Overheads · Support Allocation</div>
+        <div id="costStructureTitle" class="card-title">Cost Structure</div>
+        <div id="costStructureSubtitle" class="card-sub">COGS · Overheads · Support Allocation</div>
         <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
       </div>
 
       <div class="card">
         <div class="card-title">Cost Component Comparison</div>
-        <div class="card-sub">Same-period 2025 vs 2026</div>
+        <div id="costComparisonSubtitle" class="card-sub">Selected period comparison</div>
         <div class="chart-wrap"><canvas id="costComparisonChart"></canvas></div>
       </div>
 
       <div class="card">
         <div class="card-title">Cash Coverage & Conversion</div>
-        <div class="card-sub">Cashing ÷ cost and cashing ÷ booking</div>
+        <div id="coverageSubtitle" class="card-sub">Cashing ÷ cost and cashing ÷ booking</div>
         <div id="coveragePanel" class="coverage-section"></div>
       </div>
     </section>
 
     <section class="card">
       <div class="card-title">Monthly Comparison Matrix</div>
-      <div id="matrixSubtitle" class="card-sub">Month-by-month commercial and profitability performance</div>
+      <div id="matrixSubtitle" class="card-sub">All 2025 months are visible; unavailable 2026 months remain blank.</div>
       <div class="table-scroll">
         <table>
           <thead>
             <tr>
               <th>Month</th>
-              <th>2025 Booking</th>
-              <th>2026 Booking</th>
+              <th id="tablePriorBooking">Base Booking</th>
+              <th id="tableCurrentBooking">Current Booking</th>
               <th>Booking Δ</th>
               <th>Booking YoY</th>
-              <th>2025 Cashing</th>
-              <th>2026 Cashing</th>
+              <th id="tablePriorCashing">Base Cashing</th>
+              <th id="tableCurrentCashing">Current Cashing</th>
               <th>Cash Δ</th>
-              <th>2026 Total Cost</th>
-              <th>2026 Op. Result</th>
+              <th id="tableCurrentCost">Current Total Cost</th>
+              <th id="tableCurrentResult">Current Op. Result</th>
             </tr>
           </thead>
           <tbody id="matrixTable"></tbody>
@@ -111,17 +171,18 @@
       </div>
     </section>
 
-    <section class="grid2">
+    <section class="insight-layout">
       <div class="card">
-        <div class="card-title" style="margin-bottom:12px">Management Insights</div>
+        <div class="card-title section-card-title">Insights</div>
         <div id="insightList" class="insight-list"></div>
       </div>
-      <div class="card">
-        <div class="card-title" style="margin-bottom:12px">Management Recommendations</div>
+      <div class="card recommendations-card">
+        <div class="card-title section-card-title">Recommendations</div>
         <div id="recommendationList" class="rec-list"></div>
       </div>
     </section>
   </main>
+
   <script src="./assets/dashboard-core.js"></script>
   <script src="./assets/dashboard-ui.js"></script>
   <script src="./assets/dashboard-charts.js"></script>
