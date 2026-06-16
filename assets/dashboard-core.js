@@ -260,16 +260,18 @@ function calculateSnapshot() {
   const snapshot = { indexes, priorYear: prior, currentYear: current, years: {} };
 
   [prior, current].forEach((year) => {
-    const booking = aggregate(year, 'booking', indexes);
-    const cashing = aggregate(year, 'cashing', indexes);
-    const cogs = aggregate(year, 'cogs', indexes);
-    const overheads = aggregate(year, 'overheads', indexes);
-    const support = aggregate(year, 'support', indexes);
+    const availableIndexes = indexes.filter((index) => monthHasData(year, index));
+    const booking = aggregate(year, 'booking', availableIndexes);
+    const cashing = aggregate(year, 'cashing', availableIndexes);
+    const cogs = aggregate(year, 'cogs', availableIndexes);
+    const overheads = aggregate(year, 'overheads', availableIndexes);
+    const support = aggregate(year, 'support', availableIndexes);
     const totalCost = cogs + overheads + support;
     const operatingResult = booking - totalCost;
     const cashGap = cashing - totalCost;
     const cashCoverage = safeDivide(cashing, totalCost);
     const bookingToCash = safeDivide(cashing, booking);
+
     snapshot.years[year] = {
       booking,
       cashing,
@@ -280,7 +282,11 @@ function calculateSnapshot() {
       operatingResult,
       cashGap,
       cashCoverage,
-      bookingToCash
+      bookingToCash,
+      availableMonthCount: availableIndexes.length,
+      requestedMonthCount: indexes.length,
+      hasData: availableIndexes.length > 0,
+      completeForPeriod: indexes.length > 0 && availableIndexes.length === indexes.length
     };
   });
 
