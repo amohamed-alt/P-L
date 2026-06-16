@@ -1,0 +1,89 @@
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.filter-actions .secondary-button {
+  min-height: 34px;
+}
+
+.insights-card {
+  border-top: 3px solid var(--forest2);
+}
+
+.insights-card .insight-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.insights-card .insight {
+  min-height: 118px;
+}
+
+.kpi.no-data {
+  border-style: dashed;
+  background: linear-gradient(180deg, #fff, #f8fafc);
+}
+
+.kpi.no-data .kpi-val,
+.kpi.no-data .kpi-prior,
+.kpi.no-data .kpi-var {
+  color: var(--slate400);
+}
+
+.data-availability-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--slate100);
+  color: var(--slate500);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.table-scroll th:first-child,
+.table-scroll td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #fff;
+}
+
+.table-scroll th:first-child {
+  background: var(--slate50);
+}
+
+.table-scroll .total-row td:first-child {
+  background: var(--slate50);
+}
+
+@media (max-width: 1180px) {
+  .insights-card .insight-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .filter-heading {
+    flex-direction: column;
+  }
+
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filter-actions .secondary-button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .insights-card .insight-list {
+    grid-template-columns: 1fr;
+  }
+}
