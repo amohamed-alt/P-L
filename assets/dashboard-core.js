@@ -15,7 +15,6 @@ const METRICS = {
   overheads: { label: 'Overheads', color: '#7c3aed', kind: 'amount' },
   support: { label: 'Support Allocation', color: '#ca8a04', kind: 'amount' },
   totalCost: { label: 'Total Cost', color: '#7c3aed', kind: 'amount' },
-  operatingResult: { label: 'Operating Result', color: '#dc2626', kind: 'amount' },
   cashGap: { label: 'Cash Gap', color: '#ea580c', kind: 'amount' },
   cashCoverage: { label: 'Cash Coverage', color: '#ea580c', kind: 'ratio' },
   bookingToCash: { label: 'Booking-to-Cash', color: '#2563eb', kind: 'ratio' }
@@ -163,7 +162,6 @@ function getMetricSeries(metric, year) {
   return parsedData.months.map((_, index) => {
     const totalCost = cogs[index] + overheads[index] + support[index];
     if (metric === 'totalCost') return totalCost;
-    if (metric === 'operatingResult') return booking[index] - totalCost;
     if (metric === 'cashGap') return cashing[index] - totalCost;
     if (metric === 'cashCoverage') return safeDivide(cashing[index], totalCost);
     if (metric === 'bookingToCash') return safeDivide(cashing[index], booking[index]);
@@ -267,7 +265,6 @@ function calculateSnapshot() {
     const overheads = aggregate(year, 'overheads', availableIndexes);
     const support = aggregate(year, 'support', availableIndexes);
     const totalCost = cogs + overheads + support;
-    const operatingResult = booking - totalCost;
     const cashGap = cashing - totalCost;
     const cashCoverage = safeDivide(cashing, totalCost);
     const bookingToCash = safeDivide(cashing, booking);
@@ -279,7 +276,6 @@ function calculateSnapshot() {
       overheads,
       support,
       totalCost,
-      operatingResult,
       cashGap,
       cashCoverage,
       bookingToCash,
@@ -304,12 +300,6 @@ function statusFor(metric, current, prior) {
   const variance = getVariance(current, prior);
   const lowerIsBetter = ['totalCost', 'cogs', 'overheads', 'support'].includes(metric);
   const effectivePercent = lowerIsBetter && variance.percent !== null ? -variance.percent : variance.percent;
-
-  if (metric === 'operatingResult') {
-    if (current >= 0) return { label: 'Strong', className: 'strong', positive: true };
-    if (current > prior) return { label: 'Improving', className: 'improve', positive: true };
-    return { label: 'Critical', className: 'critical', positive: false };
-  }
 
   if (effectivePercent === null || Math.abs(effectivePercent) < 0.02) return { label: 'Stable', className: 'stable', positive: true };
   if (effectivePercent >= 0.15) return { label: 'Strong', className: 'strong', positive: true };
