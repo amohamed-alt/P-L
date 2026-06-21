@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./assets/dashboard.css">
   <link rel="stylesheet" href="./assets/dashboard-v2.css">
   <link rel="stylesheet" href="./assets/dashboard-v3.css">
+  <link rel="stylesheet" href="./assets/dashboard-forecast.css">
 </head>
 <body>
   <div id="loadingOverlay" class="loading-overlay">
@@ -32,7 +33,14 @@
     </div>
   </header>
 
-  <main>
+  <div class="dashboard-tabs-shell">
+    <nav class="dashboard-tabs" aria-label="Dashboard sections">
+      <button class="dashboard-tab-button" type="button" data-dashboard-tab="actual" aria-selected="true">Actual Performance</button>
+      <button class="dashboard-tab-button" type="button" data-dashboard-tab="forecasting" aria-selected="false" tabindex="-1">Forecasting</button>
+    </nav>
+  </div>
+
+  <main id="actualView" class="dashboard-view">
     <div id="statusBanner" class="status-banner"></div>
 
     <section class="filter-card" aria-label="Dashboard filters">
@@ -83,7 +91,7 @@
         <label class="filter-field">
           <span>Monthly chart focus</span>
           <select id="metricFocus">
-            <option value="commercial">Booking & Cashing</option>
+            <option value="commercial">Booking &amp; Cashing</option>
             <option value="booking">Booking</option>
             <option value="cashing">Cashing</option>
             <option value="totalCost">Total Cost</option>
@@ -135,7 +143,7 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Cash Coverage & Conversion</div>
+        <div class="card-title">Cash Coverage &amp; Conversion</div>
         <div id="coverageSubtitle" class="card-sub">Cashing ÷ cost and cashing ÷ booking</div>
         <div id="coveragePanel" class="coverage-section"></div>
       </div>
@@ -170,10 +178,83 @@
     </section>
   </main>
 
+  <main id="forecastView" class="dashboard-view" hidden>
+    <div id="forecastStatusBanner" class="status-banner"></div>
+
+    <section class="card forecast-hero">
+      <div class="forecast-hero-copy">
+        <h2 id="forecastTitle">2026 Full-Year Forecast</h2>
+        <p id="forecastSubtitle">Actual January–May plus forecast June–December.</p>
+        <div class="forecast-basis-tags">
+          <span class="forecast-tag actual">Actual: Jan–May</span>
+          <span class="forecast-tag forecast">Forecast: Jun–Dec</span>
+          <span class="forecast-tag cost">Annual Cost: $3,773,275</span>
+        </div>
+      </div>
+      <div class="forecast-actions">
+        <button id="forecastRefreshButton" class="forecast-action-button" type="button">Refresh forecast</button>
+        <button id="forecastExportButton" class="forecast-action-button" type="button">Export forecast CSV</button>
+      </div>
+    </section>
+
+    <div id="forecastLoading" class="card empty-state" hidden>Loading forecast data…</div>
+
+    <section>
+      <p class="section-label">2026 Year-End Outlook</p>
+      <div id="forecastKpiGrid" class="kpi-grid forecast-kpi-grid"></div>
+    </section>
+
+    <section class="forecast-chart-grid">
+      <div class="card">
+        <div class="card-title">Monthly Actual + Forecast Outlook</div>
+        <div class="card-sub">Darker bars are actual Jan–May; lighter bars are forecast Jun–Dec. Cost uses the approved annual plan.</div>
+        <div class="chart-wrap forecast-chart-wrap"><canvas id="forecastMonthlyChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Cumulative Year-End Position</div>
+        <div class="card-sub">How booking and cashing build against the cumulative annual cost plan.</div>
+        <div class="chart-wrap forecast-chart-wrap"><canvas id="forecastCumulativeChart"></canvas></div>
+      </div>
+    </section>
+
+    <section>
+      <p class="section-label">Projected Closing Position</p>
+      <div id="forecastPositionGrid" class="forecast-position-grid"></div>
+    </section>
+
+    <section class="card">
+      <div class="forecast-detail-header">
+        <div>
+          <div id="forecastDetailTitle" class="card-title">Booking Forecast by Owner</div>
+          <div id="forecastDetailSubtitle" class="card-sub">June–December 2026 supplied forecast values</div>
+        </div>
+        <label>
+          <span class="section-label" style="display:block;margin-bottom:5px">Forecast Detail</span>
+          <select id="forecastDetailMetric" class="forecast-select">
+            <option value="booking">Booking forecast</option>
+            <option value="cashing">Cashing forecast</option>
+          </select>
+        </label>
+      </div>
+      <div class="table-scroll">
+        <table class="forecast-table">
+          <thead id="forecastDetailHead"></thead>
+          <tbody id="forecastDetailBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card insights-card">
+      <div class="card-title section-card-title">Forecast Insights</div>
+      <div id="forecastInsightList" class="insight-list"></div>
+    </section>
+  </main>
+
   <script src="./assets/dashboard-core.js"></script>
   <script src="./assets/dashboard-ui.js"></script>
   <script src="./assets/dashboard-charts-clean.js"></script>
   <script src="./assets/dashboard-tables-clean.js"></script>
   <script src="./assets/dashboard-insights-clean.js"></script>
+  <script src="./assets/dashboard-forecast.js"></script>
 </body>
 </html>
