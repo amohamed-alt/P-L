@@ -26,7 +26,7 @@ async function waitForActualDashboard(timeoutMs = 12000) {
 
 function validateForecastPayload(payload) {
   if (!payload || typeof payload !== 'object') throw new Error('Forecast data is empty or invalid.');
-  if (!Array.isArray(payload.booking) || !Array.isArray(payload.cashing)) {
+  if (!Array.isArray(payload.booking) || !Array.isArray(payload.cashing) || !payload.booking.length || !payload.cashing.length) {
     throw new Error('Forecast data must contain booking and cashing owner rows.');
   }
 
@@ -371,6 +371,7 @@ function renderForecastPosition(snapshot) {
 }
 
 function renderForecastDetailTable() {
+  if (!forecastState.data) return;
   const metric = forecastById('forecastDetailMetric').value;
   const rows = forecastState.data[metric];
   const monthlyTotals = forecastMonthlyTotals(rows);
@@ -462,6 +463,7 @@ function renderForecastDashboard() {
 async function loadForecastData(force = false) {
   if (forecastState.data && !force) {
     renderForecastDashboard();
+    if (forecastState.activeTab === 'forecasting') updateHeaderForForecast();
     return;
   }
 
@@ -475,6 +477,7 @@ async function loadForecastData(force = false) {
     if (!response.ok) throw new Error(`Unable to load forecast data (${response.status} ${response.statusText}).`);
     forecastState.data = validateForecastPayload(await response.json());
     renderForecastDashboard();
+    if (forecastState.activeTab === 'forecasting') updateHeaderForForecast();
   } catch (error) {
     console.error(error);
     const banner = forecastById('forecastStatusBanner');
