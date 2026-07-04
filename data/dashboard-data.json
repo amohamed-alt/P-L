@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-04T02:00:50.607Z",
+    "generatedAt": "2026-07-04T03:00:40.293Z",
     "source": "n8n-google-sheets",
     "currency": "AED",
     "reportingYears": [
@@ -9,12 +9,12 @@
     ],
     "currentReportingYear": 2026,
     "previousReportingYear": 2025,
-    "latestDataMonthNumber": 6,
-    "latestDataMonth": "June",
+    "latestDataMonthNumber": 7,
+    "latestDataMonth": "July",
     "closedMonthNumber": 6,
     "closedMonth": "June",
     "comparisonPeriod": "Jan–Jun",
-    "partialMonthExcluded": false
+    "partialMonthExcluded": true
   },
   "totalsByYear": {
     "2025": {
@@ -33,12 +33,12 @@
       "booking": 2448740.69,
       "cashing": 1557779.3323913033,
       "cogs": 301030.75,
-      "overheads": 1636888.46,
-      "supportAllocation": 447394.12448,
-      "totalCost": 2385313.33448,
-      "operatingResult": 63427.35551999963,
-      "cashGap": -827534.0020886967,
-      "cashCoverage": 0.6530711541638617,
+      "overheads": 1642545.02,
+      "supportAllocation": 448305.3074800001,
+      "totalCost": 2391881.0774800004,
+      "operatingResult": 56859.61251999962,
+      "cashGap": -834101.7450886967,
+      "cashCoverage": 0.6512779197335862,
       "bookingToCash": 0.6361552853484471
     }
   },
@@ -332,7 +332,7 @@
       "cashing": 394184.42130434944,
       "cogs": 51200.91,
       "overheads": 286324.04000000004,
-      "supportAllocation": 74743.37038199998,
+      "supportAllocation": 74743.37038200001,
       "totalCost": 412268.32038200006,
       "operatingResult": 371927.23961799976,
       "cashGap": -18083.899077650625,
@@ -370,13 +370,13 @@
       "monthNumber": 5,
       "booking": 191108.90999999997,
       "cashing": 116010.44239130359,
-      "cogs": 51938.06,
+      "cogs": 51938.060000000005,
       "overheads": 261006.56000000003,
-      "supportAllocation": 72387.826276,
-      "totalCost": 385332.446276,
-      "operatingResult": -194223.53627600003,
-      "cashGap": -269322.0038846964,
-      "cashCoverage": 0.30106585498437216,
+      "supportAllocation": 72387.82627600002,
+      "totalCost": 385332.44627600006,
+      "operatingResult": -194223.5362760001,
+      "cashGap": -269322.00388469646,
+      "cashCoverage": 0.3010658549843721,
       "bookingToCash": 0.6070383761348626,
       "hasMeaningfulData": true,
       "isPartial": false,
@@ -391,12 +391,12 @@
       "booking": 493805.00000000006,
       "cashing": 233720.31,
       "cogs": 37698.21,
-      "overheads": 232924.28000000003,
-      "supportAllocation": 69650.86350600001,
-      "totalCost": 340273.3535060001,
-      "operatingResult": 153531.646494,
-      "cashGap": -106553.04350600007,
-      "cashCoverage": 0.6868604537847798,
+      "overheads": 238580.84,
+      "supportAllocation": 70562.04650600001,
+      "totalCost": 346841.09650600003,
+      "operatingResult": 146963.90349400003,
+      "cashGap": -113120.78650600003,
+      "cashCoverage": 0.673854143451991,
       "bookingToCash": 0.4733048673059203,
       "hasMeaningfulData": true,
       "isPartial": false,
@@ -412,16 +412,16 @@
       "cashing": 0,
       "cogs": 0,
       "overheads": 0,
-      "supportAllocation": 0,
-      "totalCost": 0,
-      "operatingResult": 0,
-      "cashGap": 0,
-      "cashCoverage": null,
+      "supportAllocation": -30.838000000000005,
+      "totalCost": -30.838000000000005,
+      "operatingResult": 30.838000000000005,
+      "cashGap": 30.838000000000005,
+      "cashCoverage": 0,
       "bookingToCash": null,
-      "hasMeaningfulData": false,
-      "isPartial": false,
+      "hasMeaningfulData": true,
+      "isPartial": true,
       "comparisonIncluded": false,
-      "status": "future"
+      "status": "partial"
     },
     {
       "year": 2026,
@@ -528,8 +528,14 @@
     "sourceRowsReceived": 15,
     "parsedMonthlyRecords": 24,
     "ignoredRows": 0,
-    "partialMonths": [],
+    "partialMonths": [
+      {
+        "year": 2026,
+        "month": "July",
+        "monthNumber": 7
+      }
+    ],
     "missingMetrics": [],
-    "detectedTypicalMonthlyCost": 412268.32038200006
+    "detectedTypicalMonthlyCost": 400028.659424
   }
 }
