@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-05T03:00:40.631Z",
+    "generatedAt": "2026-07-05T04:00:50.176Z",
     "source": "n8n-google-sheets",
     "currency": "AED",
     "reportingYears": [
@@ -192,11 +192,11 @@
       "cashing": 499027.70999999944,
       "cogs": 49211.670000000006,
       "overheads": 279452.42000000004,
-      "supportAllocation": 74116.298216,
-      "totalCost": 402780.38821600005,
-      "operatingResult": -53702.14821600006,
-      "cashGap": 96247.32178399939,
-      "cashCoverage": 1.238957319174102,
+      "supportAllocation": 73270.566644,
+      "totalCost": 401934.65664400003,
+      "operatingResult": -52856.41664400004,
+      "cashGap": 97093.05335599941,
+      "cashCoverage": 1.2415642735729462,
       "bookingToCash": 1.4295583419923266,
       "hasMeaningfulData": true,
       "isPartial": false,
