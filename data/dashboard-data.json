@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-07T05:00:39.970Z",
+    "generatedAt": "2026-07-07T06:00:50.961Z",
     "source": "n8n-google-sheets",
     "currency": "AED",
     "reportingYears": [
@@ -32,9 +32,9 @@
     "2026": {
       "booking": 2448740.69,
       "cashing": 1557779.3323913033,
-      "cogs": 312949.91,
+      "cogs": 312949.91000000003,
       "overheads": 1657321.08,
-      "supportAllocation": 449379.02037399996,
+      "supportAllocation": 449379.0203740001,
       "totalCost": 2419650.0103740003,
       "operatingResult": 29090.679625999706,
       "cashGap": -861870.6779826966,
@@ -332,7 +332,7 @@
       "cashing": 394184.42130434944,
       "cogs": 51200.91,
       "overheads": 286324.04000000004,
-      "supportAllocation": 74743.37038199998,
+      "supportAllocation": 74743.37038200001,
       "totalCost": 412268.32038200006,
       "operatingResult": 371927.23961799976,
       "cashGap": -18083.899077650625,
@@ -350,9 +350,9 @@
       "monthNumber": 4,
       "booking": 344691.56999999995,
       "cashing": 129783.91999999998,
-      "cogs": 49935.42,
+      "cogs": 49935.420000000006,
       "overheads": 268065.17,
-      "supportAllocation": 69788.408466,
+      "supportAllocation": 69788.40846600002,
       "totalCost": 387788.99846599996,
       "operatingResult": -43097.42846600001,
       "cashGap": -258005.07846599998,
