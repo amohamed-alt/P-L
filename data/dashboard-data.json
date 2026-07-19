@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-19T02:00:53.669Z",
+    "generatedAt": "2026-07-19T03:00:40.598Z",
     "source": "n8n-google-sheets",
     "currency": "AED",
     "reportingYears": [
@@ -192,7 +192,7 @@
       "cashing": 499027.70999999944,
       "cogs": 49211.670000000006,
       "overheads": 279452.42000000004,
-      "supportAllocation": 73270.56664399999,
+      "supportAllocation": 73270.566644,
       "totalCost": 401934.65664400003,
       "operatingResult": -52856.41664400004,
       "cashGap": 97093.05335599941,
