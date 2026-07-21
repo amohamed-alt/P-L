@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-21T03:00:40.380Z",
+    "generatedAt": "2026-07-21T04:00:50.247Z",
     "source": "n8n-google-sheets",
     "currency": "AED",
     "reportingYears": [
@@ -32,13 +32,13 @@
     "2026": {
       "booking": 2448740.69,
       "cashing": 1557779.3323913033,
-      "cogs": 322749.33,
-      "overheads": 1662445.06,
-      "supportAllocation": 470242.2703740001,
-      "totalCost": 2455436.6603739997,
-      "operatingResult": -6695.970374000317,
-      "cashGap": -897657.3279826967,
-      "cashCoverage": 0.6344204912840351,
+      "cogs": 322749.32999999996,
+      "overheads": 1657321.08,
+      "supportAllocation": 449566.176774,
+      "totalCost": 2429636.586774,
+      "operatingResult": 19104.103225999686,
+      "cashGap": -871857.2543826967,
+      "cashCoverage": 0.6411573405139066,
       "bookingToCash": 0.6361552853484471
     }
   },
@@ -331,12 +331,12 @@
       "booking": 784195.5599999998,
       "cashing": 394184.42130434944,
       "cogs": 51200.91,
-      "overheads": 291448.02,
-      "supportAllocation": 95419.46398200002,
-      "totalCost": 438068.39398200007,
-      "operatingResult": 346127.16601799976,
-      "cashGap": -43883.97267765063,
-      "cashCoverage": 0.8998239241166214,
+      "overheads": 286324.04000000004,
+      "supportAllocation": 74743.37038199998,
+      "totalCost": 412268.32038200006,
+      "operatingResult": 371927.23961799976,
+      "cashGap": -18083.899077650625,
+      "cashCoverage": 0.9561356083317427,
       "bookingToCash": 0.5026608685521626,
       "hasMeaningfulData": true,
       "isPartial": false,
@@ -350,9 +350,9 @@
       "monthNumber": 4,
       "booking": 344691.56999999995,
       "cashing": 129783.91999999998,
-      "cogs": 49935.420000000006,
+      "cogs": 49935.42,
       "overheads": 268065.17,
-      "supportAllocation": 69788.40846600002,
+      "supportAllocation": 69788.408466,
       "totalCost": 387788.99846599996,
       "operatingResult": -43097.42846600001,
       "cashGap": -258005.07846599998,
@@ -410,13 +410,13 @@
       "monthNumber": 7,
       "booking": 252432.33999999997,
       "cashing": 65220.22,
-      "cogs": 2200.61,
-      "overheads": 2669.7400000000002,
-      "supportAllocation": 971.486114,
-      "totalCost": 5841.836114000001,
-      "operatingResult": 246590.50388599996,
-      "cashGap": 59378.383886,
-      "cashCoverage": 11.164335788828327,
+      "cogs": 33865.42,
+      "overheads": 21599.350000000002,
+      "supportAllocation": 19629.833564,
+      "totalCost": 75094.603564,
+      "operatingResult": 177337.73643599998,
+      "cashGap": -9874.383564000003,
+      "cashCoverage": 0.8685074147094408,
       "bookingToCash": 0.2583671331494214,
       "hasMeaningfulData": true,
       "isPartial": true,
@@ -536,6 +536,6 @@
       }
     ],
     "missingMetrics": [],
-    "detectedTypicalMonthlyCost": 405738.113852
+    "detectedTypicalMonthlyCost": 400028.659424
   }
 }
