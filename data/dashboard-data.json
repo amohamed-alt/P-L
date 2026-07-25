@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-07-25T03:00:40.288Z",
+    "generatedAt": "2026-07-25T04:00:50.271Z",
     "source": "n8n-google-sheets",
     "currency": "AED",
     "reportingYears": [
@@ -32,7 +32,7 @@
     "2026": {
       "booking": 2448740.69,
       "cashing": 1557779.3323913033,
-      "cogs": 315618.29,
+      "cogs": 315618.29000000004,
       "overheads": 1657321.08,
       "supportAllocation": 449429.98637400003,
       "totalCost": 2422369.356374,
@@ -350,7 +350,7 @@
       "monthNumber": 4,
       "booking": 344691.56999999995,
       "cashing": 129783.91999999998,
-      "cogs": 49935.42,
+      "cogs": 49935.420000000006,
       "overheads": 268065.17,
       "supportAllocation": 69788.408466,
       "totalCost": 387788.99846599996,
