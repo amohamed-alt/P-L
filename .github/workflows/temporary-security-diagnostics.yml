@@ -37,12 +37,48 @@ jobs:
           curl --fail --silent --show-error --location --max-time 30 'https://talimg1.b8cdn.com/wp-content/themes/talentera-2018/images/new-design/Talentera-ATS-white-logo.svg' -o public/talentera-logo.svg
           test -s public/talentera-logo.svg
           grep -q '<svg' public/talentera-logo.svg
-          if git diff --quiet -- public/talentera-logo.svg && git ls-files --error-unmatch public/talentera-logo.svg >/dev/null 2>&1; then
-            echo 'Logo already vendored.'
-            exit 0
-          fi
+
+      - name: Apply local logo USD and strict self-only assets
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path('src/App.jsx')
+          text = app.read_text()
+          text = text.replace("\nconst TALENTERA_LOGO_URL = 'https://talimg1.b8cdn.com/wp-content/themes/talentera-2018/images/new-design/Talentera-ATS-white-logo.svg';\n", "\n")
+          text = text.replace('src={TALENTERA_LOGO_URL}', 'src="/talentera-logo.svg"')
+          app.write_text(text)
+
+          dashboard = Path('src/dashboard.js')
+          text = dashboard.read_text()
+          text = text.replace("currency: payload.metadata?.currency || 'USD',", "currency: 'USD',")
+          text = text.replace("currency: payload.metadata?.currency || actualData.currency,", "currency: 'USD',")
+          dashboard.write_text(text)
+
+          server = Path('server.mjs')
+          text = server.read_text()
+          text = text.replace("img-src 'self' data: https://talimg1.b8cdn.com;", "img-src 'self' data:;")
+          text = text.replace("upgrade-insecure-requests\",", "upgrade-insecure-requests; block-all-mixed-content\",")
+          if "Cross-Origin-Resource-Policy" not in text:
+              text = text.replace(
+                  "response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');",
+                  "response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');\n  response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');\n  response.setHeader('X-Permitted-Cross-Domain-Policies', 'none');",
+              )
+          server.write_text(text)
+          PY
+
+          grep -q 'src="/talentera-logo.svg"' src/App.jsx
+          test "$(grep -c "currency: 'USD'" src/dashboard.js)" -ge 2
+          grep -q "img-src 'self' data:;" server.mjs
+          ! grep -q 'talimg1.b8cdn.com' src/App.jsx server.mjs
+
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/talentera-logo.svg
-          git commit -m 'Vendor official Talentera logo'
+          git add public/talentera-logo.svg src/App.jsx src/dashboard.js server.mjs
+          if git diff --cached --quiet; then
+            echo 'Application changes already applied.'
+            exit 0
+          fi
+          git commit -m 'Use local logo and USD currency'
           git push origin HEAD:${{ github.head_ref }}
