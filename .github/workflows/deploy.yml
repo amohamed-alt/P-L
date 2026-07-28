@@ -43,11 +43,10 @@ jobs:
       name: production
       url: https://pnl.dashboardtalentera.tech
     steps:
-      - name: Configure SSH
+      - name: Configure SSH key
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           test -n "$VPS_HOST"
@@ -55,12 +54,6 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          if [ -n "$VPS_KNOWN_HOSTS" ]; then
-            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts
-          fi
-          chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy production stack
         env:
@@ -69,7 +62,12 @@ jobs:
         run: |
           set -euo pipefail
           VPS_USER="${VPS_USER:-root}"
-          ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          ssh \
+            -o BatchMode=yes \
+            -o ConnectTimeout=30 \
+            -o StrictHostKeyChecking=accept-new \
+            -i ~/.ssh/id_ed25519 \
+            "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
 
           REPO_DIR=/root/P-L
@@ -77,7 +75,7 @@ jobs:
           REPO_URL=https://github.com/amohamed-alt/P-L.git
 
           if [ ! -d "$REPO_DIR/.git" ]; then
-            mkdir -p "$REPO_DIR"
+            rm -rf "$REPO_DIR"
             git clone "$REPO_URL" "$REPO_DIR"
           fi
 
@@ -88,7 +86,11 @@ jobs:
 
           install -d -m 0770 -o 1001 -g 1001 "$RUNTIME_DIR"
           test -f "$REPO_DIR/.env" || {
-            echo "Missing /root/P-L/.env. Copy .env.example and set PNL_DATA_INGEST_TOKEN first."
+            echo "Missing /root/P-L/.env. Run the one-time P&L bootstrap first."
+            exit 1
+          }
+          grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' "$REPO_DIR/.env" || {
+            echo "PNL_DATA_INGEST_TOKEN is missing or invalid."
             exit 1
           }
 
