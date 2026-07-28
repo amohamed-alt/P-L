@@ -1,0 +1,9 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+node_modules
+runtime-data
+npm-debug.log*
+README.md
