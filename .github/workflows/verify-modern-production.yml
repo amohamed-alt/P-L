@@ -11,31 +11,41 @@ jobs:
   verify-production:
     runs-on: ubuntu-latest
     steps:
-      - name: Wait for modern production release
+      - name: Configure SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 40); do
-            headers="$(mktemp)"
-            body="$(mktemp)"
-            if curl --fail --silent --show-error --location --max-time 20 -D "$headers" https://pnl.dashboardtalentera.tech/api/health -o "$body"; then
-              version="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(p.version || '')" "$body")"
-              if [ "$version" = "2" ] && grep -qi '^strict-transport-security:' "$headers"; then
-                echo "Modern API and HSTS are live."
-                break
-              fi
-            fi
-            if [ "$attempt" = "40" ]; then
-              echo "Modern production release did not become ready in time."
-              cat "$body" || true
-              exit 1
-            fi
-            sleep 5
-          done
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
 
-      - name: Verify trusted TLS and React shell
+      - name: Inspect modern release on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /root/P-L
+          echo "server_git_head=$(git rev-parse HEAD)"
+          docker compose ps
+          curl --fail --silent --show-error http://127.0.0.1:3020/api/health | node -e "let s=''; process.stdin.on('data',d=>s+=d); process.stdin.on('end',()=>{const p=JSON.parse(s); console.log('local_api_version='+(p.version || 'legacy')); if(p.version!==2) process.exit(1)})"
+          REMOTE
+
+      - name: Verify trusted public release
+        run: |
+          set -euo pipefail
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          curl --fail --silent --show-error --location --max-time 20 -D "$headers" https://pnl.dashboardtalentera.tech/api/health -o "$body"
+          node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); if(p.version!==2) throw new Error('Public API is not version 2'); console.log('public_api_version=2')" "$body"
+          grep -qi '^strict-transport-security:' "$headers"
           curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/ | grep -q 'Tech Licensing — P&L Command Center'
           echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
-          curl --fail --silent --show-error --location --max-time 20 http://pnl.dashboardtalentera.tech/api/health >/dev/null
-          echo "Trusted TLS, React shell and HTTP-to-HTTPS redirect are live."
+          redirect_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 http://pnl.dashboardtalentera.tech/api/health)"
+          test "$redirect_code" = "301" -o "$redirect_code" = "308"
+          echo "Trusted TLS, HSTS, React shell and HTTP-to-HTTPS redirect are live."
