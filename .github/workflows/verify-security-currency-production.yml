@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  deploy-and-verify:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - name: Configure SSH key
@@ -23,7 +23,7 @@ jobs:
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Deploy current main to VPS
+      - name: Verify deployed release on VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
@@ -31,9 +31,7 @@ jobs:
           ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
           cd /root/P-L
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
+          echo "server_commit=$(git rev-parse HEAD)"
           test "$(git rev-parse HEAD)" = "3f64a83068ad86c764635cede33a51470983626d"
           test -s public/talentera-logo.svg
           grep -q 'src="/talentera-logo.svg"' src/App.jsx
@@ -41,36 +39,40 @@ jobs:
           ! grep -q 'talimg1.b8cdn.com' src/App.jsx server.mjs
           grep -q "img-src 'self' data:;" server.mjs
           grep -q 'COPY public ./public' Dockerfile
-          docker compose config --quiet
-          docker compose up -d --build --remove-orphans
-          for attempt in $(seq 1 45); do
-            if curl --fail --silent --show-error http://127.0.0.1:3020/api/health >/tmp/health.json 2>/dev/null; then
-              node -e "const p=require('/tmp/health.json'); if(p.version!==2) process.exit(1)" && break
-            fi
-            if [ "$attempt" = "45" ]; then
-              docker compose logs --tail=180 pnl-dashboard
-              exit 1
-            fi
-            sleep 3
-          done
+          curl --fail --silent --show-error http://127.0.0.1:3020/api/health -o /tmp/health.json
+          node -e "const p=require('/tmp/health.json'); if(p.version!==2) process.exit(1); console.log('local_api_version=2')"
           curl --fail --silent --show-error http://127.0.0.1:3020/talentera-logo.svg -o /tmp/local-logo.svg
           grep -q '<svg' /tmp/local-logo.svg
+          echo "local_logo_bytes=$(wc -c </tmp/local-logo.svg)"
           docker compose ps
           REMOTE
 
-      - name: Verify public security and local logo
+      - name: Verify public HTTPS headers certificate and logo
         run: |
           set -euo pipefail
           headers="$(mktemp)"
           public_logo="$(mktemp)"
-          curl --fail --silent --show-error --head --max-time 20 https://pnl.dashboardtalentera.tech/ > "$headers"
+          for attempt in $(seq 1 8); do
+            if curl --fail --silent --show-error --retry 2 --retry-all-errors --max-time 25 -D "$headers" -o /dev/null https://pnl.dashboardtalentera.tech/; then
+              break
+            fi
+            if [ "$attempt" = "8" ]; then exit 1; fi
+            sleep 5
+          done
+          cat "$headers"
+          grep -qi '^HTTP/.* 200' "$headers"
           grep -qi '^strict-transport-security:' "$headers"
           grep -qi "content-security-policy:.*img-src 'self' data:;" "$headers"
           ! grep -qi 'talimg1.b8cdn.com' "$headers"
-          curl --fail --silent --show-error --max-time 20 https://pnl.dashboardtalentera.tech/talentera-logo.svg -o "$public_logo"
+          curl --fail --silent --show-error --retry 4 --retry-all-errors --max-time 25 https://pnl.dashboardtalentera.tech/talentera-logo.svg -o "$public_logo"
           grep -q '<svg' "$public_logo"
-          echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech 2>/tmp/tls.log | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
-          grep -q 'verify return:1' /tmp/tls.log
-          redirect_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 http://pnl.dashboardtalentera.tech/)"
-          test "$redirect_code" = "301" -o "$redirect_code" = "308"
-          echo 'P&L local logo, USD display code, trusted TLS, HSTS and self-only CSP are live.'
+          echo "public_logo_bytes=$(wc -c <"$public_logo")"
+          echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech -verify_return_error -showcerts > /tmp/tls.out 2>&1
+          grep -q 'Verify return code: 0 (ok)' /tmp/tls.out
+          openssl x509 -in <(sed -n '/BEGIN CERTIFICATE/,/END CERTIFICATE/p' /tmp/tls.out | sed -n '1,/END CERTIFICATE/p') -noout -subject -issuer -dates -ext subjectAltName
+          redirect_headers="$(mktemp)"
+          curl --silent --show-error --retry 3 --retry-all-errors --max-time 20 -D "$redirect_headers" -o /dev/null http://pnl.dashboardtalentera.tech/
+          cat "$redirect_headers"
+          grep -Eqi '^HTTP/.* (301|308)' "$redirect_headers"
+          grep -qi '^location: https://pnl.dashboardtalentera.tech/' "$redirect_headers"
+          echo 'Production verification passed.'
