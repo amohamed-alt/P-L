@@ -1,0 +1,41 @@
+name: Verify Modern P&L Production
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for modern production release
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            headers="$(mktemp)"
+            body="$(mktemp)"
+            if curl --fail --silent --show-error --location --max-time 20 -D "$headers" https://pnl.dashboardtalentera.tech/api/health -o "$body"; then
+              version="$(node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log(p.version || '')" "$body")"
+              if [ "$version" = "2" ] && grep -qi '^strict-transport-security:' "$headers"; then
+                echo "Modern API and HSTS are live."
+                break
+              fi
+            fi
+            if [ "$attempt" = "40" ]; then
+              echo "Modern production release did not become ready in time."
+              cat "$body" || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Verify trusted TLS and React shell
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/ | grep -q 'Tech Licensing — P&L Command Center'
+          echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+          curl --fail --silent --show-error --location --max-time 20 http://pnl.dashboardtalentera.tech/api/health >/dev/null
+          echo "Trusted TLS, React shell and HTTP-to-HTTPS redirect are live."
