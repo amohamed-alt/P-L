@@ -1,4 +1,4 @@
-name: Deploy GitHub Pages
+name: Deploy P&L Dashboard to VPS
 
 on:
   push:
@@ -7,31 +7,106 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: pnl-production
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: .
+          node-version: 24
 
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Check server syntax
+        run: npm run check
+
+      - name: Run smoke test
+        run: npm run smoke
+
+      - name: Validate Docker image
+        run: docker build --tag pnl-dashboard:${{ github.sha }} .
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://pnl.dashboardtalentera.tech
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy production stack
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          VPS_USER="${VPS_USER:-root}"
+          ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+
+          REPO_DIR=/root/P-L
+          REPO_URL=https://github.com/amohamed-alt/P-L.git
+
+          if [ ! -d "$REPO_DIR/.git" ]; then
+            mkdir -p "$REPO_DIR"
+            git clone "$REPO_URL" "$REPO_DIR"
+          fi
+
+          cd "$REPO_DIR"
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
+          mkdir -p "$REPO_DIR/data"
+          test -f "$REPO_DIR/.env" || {
+            echo "Missing /root/P-L/.env. Copy .env.example and set PNL_DATA_INGEST_TOKEN first."
+            exit 1
+          }
+
+          docker network inspect n8n_default >/dev/null 2>&1 || {
+            echo "Required Traefik network n8n_default does not exist."
+            exit 1
+          }
+
+          docker compose config --quiet
+          docker compose up -d --build --remove-orphans
+          docker compose ps
+
+          PORT=$(awk -F= '/^PNL_HOST_PORT=/{print $2}' .env | tail -1)
+          PORT=${PORT:-3020}
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
+              echo "P&L dashboard deployment is healthy."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker compose logs --tail=150 pnl-dashboard
+          exit 1
+          REMOTE
