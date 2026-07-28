@@ -1,0 +1,66 @@
+name: Deploy and Verify Talentera Logo
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Deploy current main and verify logo bundle
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /root/P-L
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "68c086503b47aa6c59119179c45c3a6934d42f0c"
+          docker compose config --quiet
+          docker compose up -d --build --remove-orphans
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:3020/api/health >/dev/null; then
+              break
+            fi
+            test "$attempt" != "45"
+            sleep 3
+          done
+          docker exec pnl-dashboard-pnl-dashboard-1 sh -lc "grep -R -q 'Talentera-ATS-white-logo.svg' /app/public"
+          docker exec pnl-dashboard-pnl-dashboard-1 sh -lc "grep -R -q 'talimg1.b8cdn.com' /app/server.mjs"
+          docker compose ps
+          REMOTE
+
+      - name: Verify production security header
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            headers="$(mktemp)"
+            if curl --fail --silent --show-error --max-time 20 -D "$headers" https://pnl.dashboardtalentera.tech/ -o /dev/null; then
+              if grep -qi "content-security-policy:.*https://talimg1.b8cdn.com" "$headers"; then
+                echo "Official Talentera logo and CSP are live."
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          echo "Production logo verification did not complete in time."
+          exit 1
