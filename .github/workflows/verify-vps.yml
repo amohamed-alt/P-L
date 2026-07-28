@@ -21,7 +21,25 @@ jobs:
           set -euo pipefail
           test -n "$VPS_HOST"
           test -n "$VPS_SSH_KEY"
+          [[ "$VPS_HOST" != *"://"* ]] || { echo "VPS_HOST must not contain http:// or https://"; exit 1; }
+          [[ "$VPS_HOST" != *"@"* ]] || { echo "VPS_HOST must contain only the host, without root@"; exit 1; }
+          [[ "$VPS_HOST" != *":"* ]] || { echo "VPS_HOST must not include a port; use the host only."; exit 1; }
+          if [ "$VPS_HOST" = "187.77.2.175" ]; then
+            echo "VPS_HOST matches the Talentera VPS address."
+          else
+            echo "VPS_HOST does not match the expected Talentera VPS address."
+            exit 1
+          fi
           echo "Required SSH secrets are configured."
+
+      - name: Verify SSH port is reachable
+        run: |
+          set -euo pipefail
+          timeout 15 bash -c 'cat < /dev/null > /dev/tcp/187.77.2.175/22' || {
+            echo "GitHub cannot reach TCP port 22 on the VPS. Check the Hostinger firewall or confirm the SSH port."
+            exit 1
+          }
+          echo "VPS SSH port 22 is reachable."
 
       - name: Configure SSH
         env:
@@ -36,7 +54,7 @@ jobs:
           if [ -n "$VPS_KNOWN_HOSTS" ]; then
             printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           else
-            ssh-keyscan -H "$VPS_HOST" > ~/.ssh/known_hosts
+            ssh-keyscan -T 15 -H "$VPS_HOST" > ~/.ssh/known_hosts
           fi
           chmod 600 ~/.ssh/known_hosts
 
@@ -47,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           VPS_USER="${VPS_USER:-root}"
-          ssh -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
           command -v git >/dev/null
           command -v docker >/dev/null
