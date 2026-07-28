@@ -1,4 +1,4 @@
-name: Verify P&L VPS Access
+name: Bootstrap P&L VPS
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  verify-vps:
+  bootstrap-pnl:
     runs-on: ubuntu-latest
     steps:
       - name: Configure SSH
@@ -30,8 +30,74 @@ jobs:
           fi
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Report VPS status
+      - name: Bootstrap and deploy P&L
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
-          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'failed=0; command -v git >/dev/null && echo git=ok || { echo git=missing; failed=1; }; command -v docker >/dev/null && echo docker=ok || { echo docker=missing; failed=1; }; docker compose version >/dev/null 2>&1 && echo compose=ok || { echo compose=missing; failed=1; }; docker network inspect n8n_default >/dev/null 2>&1 && echo network=ok || { echo network=missing; failed=1; }; [ -f /root/P-L/.env ] && echo env=ok || { echo env=missing; failed=1; }; grep -Eq "^PNL_DATA_INGEST_TOKEN=.{32,}$" /root/P-L/.env 2>/dev/null && echo token=ok || { echo token=missing; failed=1; }; exit $failed'
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+
+          REPO_DIR=/root/P-L
+          RUNTIME_DIR=/root/P-L-runtime/data
+          REPO_URL=https://github.com/amohamed-alt/P-L.git
+
+          if [ ! -d "$REPO_DIR/.git" ]; then
+            rm -rf "$REPO_DIR"
+            git clone "$REPO_URL" "$REPO_DIR"
+          fi
+
+          cd "$REPO_DIR"
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
+          if [ ! -f .env ]; then
+            umask 077
+            TOKEN="$(openssl rand -hex 32)"
+            cat > .env <<EOF
+          PNL_DATA_INGEST_TOKEN=$TOKEN
+          PNL_DOMAIN=pnl.dashboardtalentera.tech
+          PNL_HOST_PORT=3020
+          DATA_MAX_BYTES=15728640
+          EOF
+            unset TOKEN
+            echo "Created secure P&L environment configuration."
+          else
+            echo "Existing P&L environment configuration preserved."
+          fi
+
+          grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' .env
+          install -d -m 0770 -o 1001 -g 1001 "$RUNTIME_DIR"
+          docker network inspect n8n_default >/dev/null
+          docker compose config --quiet
+          docker compose up -d --build --remove-orphans
+
+          PORT="$(awk -F= '/^PNL_HOST_PORT=/{print $2}' .env | tail -1)"
+          PORT="${PORT:-3020}"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
+              echo "P&L container is healthy on port ${PORT}."
+              docker compose ps
+              exit 0
+            fi
+            sleep 2
+          done
+
+          docker compose logs --tail=150 pnl-dashboard
+          exit 1
+          REMOTE
+
+      - name: Verify public endpoint
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error --max-time 15 https://pnl.dashboardtalentera.tech/api/health; then
+              echo
+              echo "Public P&L endpoint is healthy."
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Container deployed, but public domain health check is not reachable yet."
+          exit 1
