@@ -66,3 +66,5 @@ jobs:
           grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' /root/P-L/.env
           echo "VPS connectivity and P&L prerequisites are ready."
           REMOTE
+
+# Verification rerun requested after authorized_keys update.
