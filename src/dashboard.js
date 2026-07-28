@@ -67,7 +67,7 @@ export function normalizeDashboard(payload) {
     years,
     rows,
     rowMap,
-    currency: payload.metadata?.currency || 'USD',
+    currency: 'USD',
   };
 }
 
@@ -292,7 +292,7 @@ export function calculateForecast(actualData, payload) {
 
   return {
     payload,
-    currency: payload.metadata?.currency || actualData.currency,
+    currency: 'USD',
     year,
     monthly,
     cumulative,
