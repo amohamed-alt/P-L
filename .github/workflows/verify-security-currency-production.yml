@@ -34,12 +34,13 @@ jobs:
           git fetch origin main
           git checkout main
           git reset --hard origin/main
-          test "$(git rev-parse HEAD)" = "7ae806dd81262e18192305619cb0f73c3dae3d70"
+          test "$(git rev-parse HEAD)" = "3f64a83068ad86c764635cede33a51470983626d"
           test -s public/talentera-logo.svg
           grep -q 'src="/talentera-logo.svg"' src/App.jsx
           test "$(grep -c "currency: 'USD'" src/dashboard.js)" -ge 2
           ! grep -q 'talimg1.b8cdn.com' src/App.jsx server.mjs
           grep -q "img-src 'self' data:;" server.mjs
+          grep -q 'COPY public ./public' Dockerfile
           docker compose config --quiet
           docker compose up -d --build --remove-orphans
           for attempt in $(seq 1 45); do
