@@ -12,26 +12,6 @@ jobs:
   verify-vps:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify required GitHub secrets exist
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-        run: |
-          set -euo pipefail
-          test -n "$VPS_HOST"
-          test -n "$VPS_SSH_KEY"
-          [[ "$VPS_HOST" != *"://"* ]] || { echo "VPS_HOST must not contain http:// or https://"; exit 1; }
-          [[ "$VPS_HOST" != *"@"* ]] || { echo "VPS_HOST must contain only the host, without root@"; exit 1; }
-          [[ "$VPS_HOST" != *":"* ]] || { echo "VPS_HOST must not include a port; use the host only."; exit 1; }
-          test "$VPS_HOST" = "187.77.2.175"
-          echo "Required SSH secrets are configured."
-
-      - name: Verify SSH port is reachable
-        run: |
-          set -euo pipefail
-          timeout 15 bash -c 'cat < /dev/null > /dev/tcp/187.77.2.175/22'
-          echo "VPS SSH port 22 is reachable."
-
       - name: Configure SSH
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -39,11 +19,10 @@ jobs:
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
+          test "$VPS_HOST" = "187.77.2.175"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
-          ssh-keygen -lf ~/.ssh/id_ed25519.pub
           if [ -n "$VPS_KNOWN_HOSTS" ]; then
             printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           else
@@ -51,43 +30,8 @@ jobs:
           fi
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Diagnose root SSH and VPS prerequisites
+      - name: Report VPS status
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
-          set -euo pipefail
-          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
-          set -u
-          failed=0
-
-          check_command() {
-            label="$1"
-            shift
-            if "$@" >/dev/null 2>&1; then
-              echo "PASS: $label"
-            else
-              echo "FAIL: $label"
-              failed=1
-            fi
-          }
-
-          check_command "git installed" command -v git
-          check_command "docker installed" command -v docker
-          check_command "docker compose available" docker compose version
-          check_command "Traefik network n8n_default exists" docker network inspect n8n_default
-
-          if [ -f /root/P-L/.env ]; then
-            echo "PASS: /root/P-L/.env exists"
-            if grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' /root/P-L/.env; then
-              echo "PASS: PNL_DATA_INGEST_TOKEN is configured"
-            else
-              echo "FAIL: PNL_DATA_INGEST_TOKEN is missing or too short"
-              failed=1
-            fi
-          else
-            echo "FAIL: /root/P-L/.env is missing"
-            failed=1
-          fi
-
-          exit "$failed"
-          REMOTE
+          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'failed=0; command -v git >/dev/null && echo git=ok || { echo git=missing; failed=1; }; command -v docker >/dev/null && echo docker=ok || { echo docker=missing; failed=1; }; docker compose version >/dev/null 2>&1 && echo compose=ok || { echo compose=missing; failed=1; }; docker network inspect n8n_default >/dev/null 2>&1 && echo network=ok || { echo network=missing; failed=1; }; [ -f /root/P-L/.env ] && echo env=ok || { echo env=missing; failed=1; }; grep -Eq "^PNL_DATA_INGEST_TOKEN=.{32,}$" /root/P-L/.env 2>/dev/null && echo token=ok || { echo token=missing; failed=1; }; exit $failed'
