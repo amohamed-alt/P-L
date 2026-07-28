@@ -1,0 +1,72 @@
+name: Verify P&L Security and USD Production
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH key
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Deploy current main to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /root/P-L
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "7ae806dd81262e18192305619cb0f73c3dae3d70"
+          test -s public/talentera-logo.svg
+          grep -q 'src="/talentera-logo.svg"' src/App.jsx
+          test "$(grep -c "currency: 'USD'" src/dashboard.js)" -ge 2
+          ! grep -q 'talimg1.b8cdn.com' src/App.jsx server.mjs
+          grep -q "img-src 'self' data:;" server.mjs
+          docker compose config --quiet
+          docker compose up -d --build --remove-orphans
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --show-error http://127.0.0.1:3020/api/health >/tmp/health.json 2>/dev/null; then
+              node -e "const p=require('/tmp/health.json'); if(p.version!==2) process.exit(1)" && break
+            fi
+            if [ "$attempt" = "45" ]; then
+              docker compose logs --tail=180 pnl-dashboard
+              exit 1
+            fi
+            sleep 3
+          done
+          curl --fail --silent --show-error http://127.0.0.1:3020/talentera-logo.svg | grep -q '<svg'
+          docker compose ps
+          REMOTE
+
+      - name: Verify public security and local logo
+        run: |
+          set -euo pipefail
+          headers="$(mktemp)"
+          curl --fail --silent --show-error --head --max-time 20 https://pnl.dashboardtalentera.tech/ > "$headers"
+          grep -qi '^strict-transport-security:' "$headers"
+          grep -qi "content-security-policy:.*img-src 'self' data:;" "$headers"
+          ! grep -qi 'talimg1.b8cdn.com' "$headers"
+          curl --fail --silent --show-error --max-time 20 https://pnl.dashboardtalentera.tech/talentera-logo.svg | grep -q '<svg'
+          echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech 2>/tmp/tls.log | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+          grep -q 'verify return:1' /tmp/tls.log
+          redirect_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 http://pnl.dashboardtalentera.tech/)"
+          test "$redirect_code" = "301" -o "$redirect_code" = "308"
+          echo 'P&L local logo, USD display code, trusted TLS, HSTS and self-only CSP are live.'
