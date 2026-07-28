@@ -1,4 +1,4 @@
-name: Deploy and Verify Modern P&L Production
+name: Verify Modern P&L Public Release
 
 on:
   pull_request:
@@ -8,69 +8,22 @@ permissions:
   contents: read
 
 jobs:
-  deploy-and-verify:
+  verify-public:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure SSH key
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      - name: Verify modern React dashboard and security
         run: |
           set -euo pipefail
-          test -n "$VPS_HOST"
-          test -n "$VPS_SSH_KEY"
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-
-      - name: Deploy modern main branch to VPS
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-        run: |
-          set -euo pipefail
-          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
-          set -euo pipefail
-          cd /root/P-L
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
-          test "$(git rev-parse HEAD)" = "84972fc4171f00d7226b64cbda1002a26b8545b2"
-          docker compose config --quiet
-          docker compose up -d --build --remove-orphans
-          for attempt in $(seq 1 45); do
-            body="$(curl --fail --silent --show-error http://127.0.0.1:3020/api/health || true)"
-            version="$(printf '%s' "$body" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{try{console.log(JSON.parse(s).version||'')}catch{console.log('')}})")"
-            if [ "$version" = "2" ]; then
-              echo "local_api_version=2"
-              docker compose ps
-              exit 0
-            fi
-            sleep 3
-          done
-          docker compose logs --tail=180 pnl-dashboard
-          exit 1
-          REMOTE
-
-      - name: Verify trusted public release
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 30); do
-            headers="$(mktemp)"
-            body="$(mktemp)"
-            if curl --fail --silent --show-error --location --max-time 20 -D "$headers" https://pnl.dashboardtalentera.tech/api/health -o "$body"; then
-              version="$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));console.log(p.version||'')" "$body")"
-              if [ "$version" = "2" ] && grep -qi '^strict-transport-security:' "$headers"; then
-                break
-              fi
-            fi
-            if [ "$attempt" = "30" ]; then
-              echo "Public modern release did not become ready."
-              exit 1
-            fi
-            sleep 3
-          done
-          curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/ | grep -q 'Tech Licensing — P&L Command Center'
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          curl --fail --silent --show-error --max-time 20 -D "$headers" https://pnl.dashboardtalentera.tech/api/health -o "$body"
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));if(p.version!==2)throw new Error('Expected version 2');console.log('public_api_version=2');console.log('data_source='+p.data.source);console.log('monthly_records='+p.data.monthlyRecords)" "$body"
+          grep -qi '^strict-transport-security:' "$headers"
+          echo "hsts=enabled"
+          curl --fail --silent --show-error --max-time 20 https://pnl.dashboardtalentera.tech/ | grep -q 'Tech Licensing — P&L Command Center'
+          echo "react_shell=live"
           echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech 2>/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
           redirect_code="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 http://pnl.dashboardtalentera.tech/api/health)"
+          echo "http_redirect_status=$redirect_code"
           test "$redirect_code" = "301" -o "$redirect_code" = "308"
-          echo "Modern React P&L, trusted TLS, HSTS and HTTP-to-HTTPS redirect are live."
+          echo "Modern React P&L production verification passed."
