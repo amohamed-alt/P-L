@@ -17,7 +17,7 @@ services:
     ports:
       - "127.0.0.1:${PNL_HOST_PORT:-3020}:3000"
     volumes:
-      - /root/P-L/data:/app/runtime-data
+      - /root/P-L-runtime/data:/app/runtime-data
     networks:
       - default
       - traefik_proxy
