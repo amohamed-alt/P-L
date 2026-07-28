@@ -26,10 +26,13 @@ jobs:
         with:
           node-version: 24
 
-      - name: Check server syntax
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build and check application
         run: npm run check
 
-      - name: Run smoke test
+      - name: Run API and static smoke test
         run: npm run smoke
 
       - name: Validate Docker image
@@ -43,7 +46,7 @@ jobs:
       name: production
       url: https://pnl.dashboardtalentera.tech
     steps:
-      - name: Configure SSH key
+      - name: Configure SSH
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -62,20 +65,17 @@ jobs:
         run: |
           set -euo pipefail
           VPS_USER="${VPS_USER:-root}"
-          ssh \
-            -o BatchMode=yes \
-            -o ConnectTimeout=30 \
-            -o StrictHostKeyChecking=accept-new \
-            -i ~/.ssh/id_ed25519 \
-            "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
 
           REPO_DIR=/root/P-L
           RUNTIME_DIR=/root/P-L-runtime/data
           REPO_URL=https://github.com/amohamed-alt/P-L.git
 
-          if [ ! -d "$REPO_DIR/.git" ]; then
+          if [ -e "$REPO_DIR" ] && [ ! -d "$REPO_DIR/.git" ]; then
             rm -rf "$REPO_DIR"
+          fi
+          if [ ! -d "$REPO_DIR/.git" ]; then
             git clone "$REPO_URL" "$REPO_DIR"
           fi
 
@@ -86,14 +86,13 @@ jobs:
 
           install -d -m 0770 -o 1001 -g 1001 "$RUNTIME_DIR"
           test -f "$REPO_DIR/.env" || {
-            echo "Missing /root/P-L/.env. Run the one-time P&L bootstrap first."
+            echo "Missing /root/P-L/.env. Bootstrap the production environment first."
             exit 1
           }
           grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' "$REPO_DIR/.env" || {
-            echo "PNL_DATA_INGEST_TOKEN is missing or invalid."
+            echo "PNL_DATA_INGEST_TOKEN is missing or too short."
             exit 1
           }
-
           docker network inspect n8n_default >/dev/null 2>&1 || {
             echo "Required Traefik network n8n_default does not exist."
             exit 1
@@ -105,7 +104,7 @@ jobs:
 
           PORT=$(awk -F= '/^PNL_HOST_PORT=/{print $2}' .env | tail -1)
           PORT=${PORT:-3020}
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 40); do
             if curl --fail --silent --show-error "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
               echo "P&L dashboard deployment is healthy."
               exit 0
@@ -113,6 +112,18 @@ jobs:
             sleep 2
           done
 
-          docker compose logs --tail=150 pnl-dashboard
+          docker compose logs --tail=180 pnl-dashboard
           exit 1
           REMOTE
+
+      - name: Verify trusted public HTTPS
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/api/health >/dev/null; then
+              echo "Public P&L HTTPS endpoint is healthy and trusted."
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1

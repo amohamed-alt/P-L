@@ -28,6 +28,16 @@ services:
       - "traefik.http.routers.pnl-dashboard.entrypoints=websecure"
       - "traefik.http.routers.pnl-dashboard.tls=true"
       - "traefik.http.routers.pnl-dashboard.tls.certresolver=mytlschallenge"
+      - "traefik.http.routers.pnl-dashboard.middlewares=pnl-security"
+      - "traefik.http.routers.pnl-dashboard-http.rule=Host(`${PNL_DOMAIN:-pnl.dashboardtalentera.tech}`)"
+      - "traefik.http.routers.pnl-dashboard-http.entrypoints=web"
+      - "traefik.http.routers.pnl-dashboard-http.middlewares=pnl-https-redirect"
+      - "traefik.http.middlewares.pnl-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.pnl-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.middlewares.pnl-security.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.pnl-security.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.pnl-security.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.pnl-security.headers.frameDeny=false"
       - "traefik.http.services.pnl-dashboard.loadbalancer.server.port=3000"
     healthcheck:
       test:

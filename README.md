@@ -1,6 +1,14 @@
 # P&L Executive Dashboard
 
-Production P&L dashboard deployed as a Docker service on the Talentera VPS.
+Production P&L command center deployed as a Docker service on the Talentera VPS.
+
+## Application stack
+
+- React 19 and Vite
+- Recharts for responsive executive charts
+- Lucide icons
+- Node.js runtime server for static delivery and secured n8n data ingestion
+- Docker Compose and Traefik with automatic HTTPS
 
 ## Production architecture
 
@@ -13,45 +21,43 @@ https://pnl.dashboardtalentera.tech/api/dashboard-data
     ↓
 Persistent VPS file: /root/P-L-runtime/data/dashboard-data.json
     ↓
-P&L dashboard: https://pnl.dashboardtalentera.tech
+P&L command center: https://pnl.dashboardtalentera.tech
 ```
 
-The dashboard code is deployed from GitHub. Live financial data is not written to GitHub during normal operation.
+Dashboard code is deployed from GitHub. Live financial data is not written to GitHub during normal operation.
+
+## Dashboard capabilities
+
+### Actual performance
+
+- Baseline versus comparison-year KPIs
+- Available YTD, closed-month and custom date ranges
+- Optional partial-month inclusion
+- Booking, cashing, cost, coverage and conversion views
+- Monthly performance charts and full-year context
+- Cost mix and component comparison
+- Monthly comparison matrix
+- Generated management insights
+- CSV export and print support
+
+### Forecasting
+
+- Actual plus forecast full-year position
+- Booking and cashing forecast by owner
+- Monthly and cumulative closing-position charts
+- Annual cost-plan coverage
+- Operating result, cash surplus and conversion metrics
 
 ## Runtime behavior
 
-- The browser reads `/data/dashboard-data.json` with cache disabled.
-- n8n sends the transformed Google Sheets result to the protected ingest endpoint.
+- Browser data requests use cache-disabled runtime JSON.
+- n8n sends transformed Google Sheets data to the protected ingest endpoint.
 - Data is validated before it replaces the live file.
-- Writes are atomic, so users never receive a partially written JSON file.
-- The previous successful file is retained as `dashboard-data.previous.json`.
-- If no runtime file exists yet, the service uses the repository data file as its initial seed.
-- `/api/health` reports service and data status without exposing financial values.
-
-## One-time VPS setup
-
-The VPS must already have Docker, Docker Compose, and the shared Traefik network named `n8n_default`.
-
-```bash
-mkdir -p /root/P-L
-cd /root/P-L
-
-git clone https://github.com/amohamed-alt/P-L.git .
-cp .env.example .env
-
-# Generate a strong token and paste it into PNL_DATA_INGEST_TOKEN in .env.
-openssl rand -hex 32
-nano .env
-
-install -d -m 0770 -o 1001 -g 1001 /root/P-L-runtime/data
-
-docker compose config
-docker compose up -d --build
-docker compose ps
-curl --fail http://127.0.0.1:3020/api/health
-```
-
-Do not commit `/root/P-L/.env` or share the ingest token in chat, GitHub, workflow logs, or dashboard code.
+- Writes are atomic and the previous successful file is retained.
+- If no runtime file exists, repository data is used as the initial seed.
+- `/api/health` reports application and data status without exposing financial values.
+- HTTP is permanently redirected to HTTPS.
+- HSTS and application security headers are enabled.
 
 ## Environment variables
 
@@ -62,83 +68,55 @@ PNL_HOST_PORT=3020
 DATA_MAX_BYTES=15728640
 ```
 
+Never commit `/root/P-L/.env` or expose the ingest token in chat, GitHub, workflow logs or frontend code.
+
 ## n8n configuration
 
 Keep the existing Google Sheets and transformation nodes. Replace the final GitHub file-edit node with an **HTTP Request** node.
-
-### HTTP Request node
 
 - Method: `POST`
 - URL: `https://pnl.dashboardtalentera.tech/api/dashboard-data`
 - Authentication: Generic Credential Type → Header Auth
 - Header name: `Authorization`
-- Header value: `Bearer <the same PNL_DATA_INGEST_TOKEN stored on the VPS>`
+- Header value: `Bearer <PNL_DATA_INGEST_TOKEN>`
 - Send Body: enabled
 - Body Content Type: JSON
 
-The endpoint supports both existing output formats.
-
-### When the transformation returns the dashboard object directly
-
-Use the complete current item as the JSON body:
+For a direct dashboard object:
 
 ```javascript
 ={{ $json }}
 ```
 
-### When the transformation returns `fileContent`
-
-Use this JSON body:
+For an existing `fileContent` output:
 
 ```javascript
 ={{ { fileContent: $json.fileContent } }}
 ```
 
-A successful response looks like:
+## Development
 
-```json
-{
-  "ok": true,
-  "ingestedAt": "2026-07-28T09:00:00.000Z",
-  "monthlyRecords": 24
-}
+```bash
+npm install
+npm run dev
 ```
 
-The API rejects invalid data, empty `monthlyData`, incorrect tokens, and oversized payloads. Configure the n8n workflow to retry temporary network errors without replacing the last successful dashboard file.
-
-## Automated deployment
-
-Pushes to `main` run syntax checks, an end-to-end smoke test, and a Docker build before deployment.
-
-Configure these GitHub Actions secrets:
-
-- `VPS_HOST`
-- `VPS_USER` — normally `root`
-- `VPS_SSH_KEY`
-- `VPS_KNOWN_HOSTS` — recommended; the workflow can fall back to `ssh-keyscan`
-
-The deployment workflow:
-
-1. Validates the Node server.
-2. Tests authentication, ingestion, persistence, and static delivery.
-3. Builds the Docker image.
-4. Updates `/root/P-L` on the VPS.
-5. Preserves `/root/P-L-runtime/data` outside Git.
-6. Starts the service through Docker Compose and Traefik.
-7. Fails the deployment if the local health check does not pass.
-
-## Local validation
+Production validation:
 
 ```bash
 npm run check
 npm run smoke
-docker build -t pnl-dashboard:test .
+docker build -t pnl-dashboard .
 ```
 
-## Endpoints
+## Automated deployment
 
-- `/` — dashboard
-- `/data/dashboard-data.json` — active data used by the browser
-- `/api/health` — service and data health
-- `/api/data-status` — data freshness metadata
-- `POST /api/dashboard-data` — protected n8n ingest endpoint
+Every pull request runs:
+
+- dependency installation
+- Vite production build
+- Node server syntax validation
+- secured-ingest and static-delivery smoke test
+- Docker image build
+
+Every push to `main` deploys the production stack and verifies the trusted public HTTPS health endpoint.
