@@ -5,6 +5,8 @@ import { ACTUAL_NAV, ErrorScreen, FilterPanel, LoadingScreen, StatusBadge, short
 import { ActualDashboard } from './ActualDashboard';
 import { ForecastDashboard } from './ForecastDashboard';
 
+const TALENTERA_LOGO_URL = 'https://talimg1.b8cdn.com/wp-content/themes/talentera-2018/images/new-design/Talentera-ATS-white-logo.svg';
+
 export function App() {
   const [data, setData] = useState(null);
   const [forecastPayload, setForecastPayload] = useState(null);
@@ -77,7 +79,7 @@ export function App() {
   return (
     <div className="app-shell">
       <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
-        <div className="brand"><div className="brand-logo">talentera</div><span>Finance intelligence</span></div>
+        <div className="brand"><img className="brand-logo" src={TALENTERA_LOGO_URL} alt="Talentera" /><span>Finance intelligence</span></div>
         <div className="nav-label">P&amp;L ANALYTICS</div>
         <nav>
           <button type="button" className={view === 'actual' ? 'active' : ''} onClick={() => switchView('actual')}><Gauge size={17} /><span>Actual Performance</span></button>
