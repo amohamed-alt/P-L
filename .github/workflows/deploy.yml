@@ -70,6 +70,7 @@ jobs:
           set -euo pipefail
 
           REPO_DIR=/root/P-L
+          RUNTIME_DIR=/root/P-L-runtime/data
           REPO_URL=https://github.com/amohamed-alt/P-L.git
 
           if [ ! -d "$REPO_DIR/.git" ]; then
@@ -82,7 +83,7 @@ jobs:
           git checkout main
           git reset --hard origin/main
 
-          mkdir -p "$REPO_DIR/data"
+          install -d -m 0770 -o 1001 -g 1001 "$RUNTIME_DIR"
           test -f "$REPO_DIR/.env" || {
             echo "Missing /root/P-L/.env. Copy .env.example and set PNL_DATA_INGEST_TOKEN first."
             exit 1
