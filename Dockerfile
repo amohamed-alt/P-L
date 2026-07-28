@@ -7,6 +7,7 @@ RUN npm install --no-audit --no-fund
 
 COPY index.html vite.config.js ./
 COPY src ./src
+COPY public ./public
 COPY data ./data
 
 RUN mkdir -p public/data \
