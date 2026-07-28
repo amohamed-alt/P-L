@@ -1,0 +1,46 @@
+name: pnl-dashboard
+
+services:
+  pnl-dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - /root/P-L/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      STATIC_DIR: /app/public
+      DATA_DIR: /app/runtime-data
+      DATA_MAX_BYTES: ${DATA_MAX_BYTES:-15728640}
+    ports:
+      - "127.0.0.1:${PNL_HOST_PORT:-3020}:3000"
+    volumes:
+      - /root/P-L/data:/app/runtime-data
+    networks:
+      - default
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=n8n_default"
+      - "traefik.http.routers.pnl-dashboard.rule=Host(`${PNL_DOMAIN:-pnl.dashboardtalentera.tech}`)"
+      - "traefik.http.routers.pnl-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.pnl-dashboard.tls=true"
+      - "traefik.http.routers.pnl-dashboard.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.pnl-dashboard.loadbalancer.server.port=3000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 8s
+      start_period: 20s
+      retries: 5
+
+networks:
+  traefik_proxy:
+    external: true
+    name: n8n_default
