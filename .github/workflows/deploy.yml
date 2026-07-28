@@ -1,6 +1,8 @@
 name: Deploy P&L Dashboard to VPS
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
@@ -9,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: pnl-production
+  group: pnl-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -34,6 +36,7 @@ jobs:
         run: docker build --tag pnl-dashboard:${{ github.sha }} .
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: validate
     runs-on: ubuntu-latest
     environment:
