@@ -30,6 +30,5 @@ jobs:
           test -s /tmp/talentera-logo.svg
           echo "logo_bytes=$(wc -c </tmp/talentera-logo.svg)"
           echo 'LOGO_BASE64_START'
-          base64 -w0 /tmp/talentera-logo.svg
-          echo
+          base64 -w1000 /tmp/talentera-logo.svg
           echo 'LOGO_BASE64_END'
