@@ -11,9 +11,8 @@ button,input,select { font: inherit; } button,a { -webkit-tap-highlight-color: t
 .app-shell { min-height: 100vh; }
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 50; width: 246px; display:flex; flex-direction:column; padding:20px 14px; color:#fff; background:radial-gradient(circle at 15% 5%,rgba(61,158,115,.2),transparent 28%),linear-gradient(180deg,#0e4b3e,#0a3d32); box-shadow:14px 0 40px rgba(14,75,62,.12); }
 .brand { padding:3px 12px 20px; border-bottom:1px solid rgba(255,255,255,.12); }
-.brand-logo { font-size:29px; font-weight:800; letter-spacing:-.065em; line-height:1; text-transform:lowercase; }
-.brand-logo::after { content:""; display:inline-block; width:8px; height:8px; margin-left:5px; border-radius:99px; background:#f1bd28; vertical-align:4px; }
-.brand>span { display:block; margin-top:8px; color:#9ec1b3; font-size:9px; letter-spacing:.15em; text-transform:uppercase; }
+.brand-logo { display:block; width:156px; max-width:100%; height:auto; object-fit:contain; object-position:left center; }
+.brand>span { display:block; margin-top:10px; color:#9ec1b3; font-size:9px; letter-spacing:.15em; text-transform:uppercase; }
 .nav-label { padding:23px 10px 9px; color:#78a797; font-size:8px; font-weight:800; letter-spacing:.16em; }
 .data-label { padding-top:26px; }
 .sidebar nav { display:flex; flex-direction:column; gap:4px; }
