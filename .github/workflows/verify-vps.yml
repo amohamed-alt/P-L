@@ -1,4 +1,4 @@
-name: Bootstrap P&L VPS
+name: Diagnose P&L Routing
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  bootstrap-pnl:
+  diagnose-routing:
     runs-on: ubuntu-latest
     steps:
       - name: Configure SSH key
@@ -18,79 +18,29 @@ jobs:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           set -euo pipefail
-          test "$VPS_HOST" = "187.77.2.175"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
 
-      - name: Bootstrap and deploy P&L
+      - name: Check VPS routing
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
-          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
-          set -euo pipefail
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" '
+            echo "container_health=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:3020/api/health || true)";
+            echo "port_443_listening=$(ss -ltn | awk "\$4 ~ /:443$/ {found=1} END {print found ? \"yes\" : \"no\"}")";
+            echo "traefik_https=$(curl -k -sS -o /dev/null -w "%{http_code}" --resolve pnl.dashboardtalentera.tech:443:127.0.0.1 https://pnl.dashboardtalentera.tech/api/health || true)";
+            echo "pnl_networks=$(docker inspect pnl-dashboard-pnl-dashboard-1 --format "{{range \$k, \$v := .NetworkSettings.Networks}}{{\$k}} {{end}}" 2>/dev/null || echo unknown)";
+            docker ps --filter name=pnl-dashboard --format "container={{.Names}} status={{.Status}}";
+          '
 
-          REPO_DIR=/root/P-L
-          RUNTIME_DIR=/root/P-L-runtime/data
-          REPO_URL=https://github.com/amohamed-alt/P-L.git
-
-          if [ ! -d "$REPO_DIR/.git" ]; then
-            rm -rf "$REPO_DIR"
-            git clone "$REPO_URL" "$REPO_DIR"
-          fi
-
-          cd "$REPO_DIR"
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
-
-          if [ ! -f .env ]; then
-            umask 077
-            TOKEN="$(openssl rand -hex 32)"
-            cat > .env <<EOF
-          PNL_DATA_INGEST_TOKEN=$TOKEN
-          PNL_DOMAIN=pnl.dashboardtalentera.tech
-          PNL_HOST_PORT=3020
-          DATA_MAX_BYTES=15728640
-          EOF
-            unset TOKEN
-            echo "Created secure P&L environment configuration."
-          else
-            echo "Existing P&L environment configuration preserved."
-          fi
-
-          grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' .env
-          install -d -m 0770 -o 1001 -g 1001 "$RUNTIME_DIR"
-          docker network inspect n8n_default >/dev/null
-          docker compose config --quiet
-          docker compose up -d --build --remove-orphans
-
-          PORT="$(awk -F= '/^PNL_HOST_PORT=/{print $2}' .env | tail -1)"
-          PORT="${PORT:-3020}"
-
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error "http://127.0.0.1:${PORT}/api/health" >/dev/null; then
-              echo "P&L container is healthy on port ${PORT}."
-              docker compose ps
-              exit 0
-            fi
-            sleep 2
-          done
-
-          docker compose logs --tail=150 pnl-dashboard
-          exit 1
-          REMOTE
-
-      - name: Verify public endpoint
+      - name: Check public DNS
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error --max-time 15 https://pnl.dashboardtalentera.tech/api/health; then
-              echo
-              echo "Public P&L endpoint is healthy."
-              exit 0
-            fi
-            sleep 3
-          done
-          echo "Container deployed, but public domain health check is not reachable yet."
-          exit 1
+          if getent ahostsv4 pnl.dashboardtalentera.tech | head -1; then
+            echo "dns=resolved"
+          else
+            echo "dns=missing"
+          fi
+          code="$(curl -k -sS -o /dev/null -w '%{http_code}' --max-time 15 --resolve pnl.dashboardtalentera.tech:443:187.77.2.175 https://pnl.dashboardtalentera.tech/api/health || true)"
+          echo "public_ip_https=${code:-unreachable}"
