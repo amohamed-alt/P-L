@@ -5,30 +5,44 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect DNS TLS and logo source
+      - name: Checkout pull request branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Inspect DNS and TLS
         run: |
           set -euo pipefail
           echo '=== DNS A ==='
-          dig +short A pnl.dashboardtalentera.tech @1.1.1.1 || true
-          dig +short A pnl.dashboardtalentera.tech @8.8.8.8 || true
+          dig +short A pnl.dashboardtalentera.tech @1.1.1.1
+          dig +short A pnl.dashboardtalentera.tech @8.8.8.8
           echo '=== DNS AAAA ==='
           dig +short AAAA pnl.dashboardtalentera.tech @1.1.1.1 || true
           dig +short AAAA pnl.dashboardtalentera.tech @8.8.8.8 || true
           echo '=== TLS ==='
           echo | openssl s_client -connect pnl.dashboardtalentera.tech:443 -servername pnl.dashboardtalentera.tech -showcerts 2>/tmp/tls.log | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
-          tail -30 /tmp/tls.log
-          echo '=== HTTPS HEADERS ==='
+          grep -q 'verify return:1' /tmp/tls.log
           curl --fail --silent --show-error --head --max-time 20 https://pnl.dashboardtalentera.tech/
-          echo '=== LOGO DOWNLOAD ==='
-          curl --fail --silent --show-error --location --max-time 30 'https://talimg1.b8cdn.com/wp-content/themes/talentera-2018/images/new-design/Talentera-ATS-white-logo.svg' -o /tmp/talentera-logo.svg
-          test -s /tmp/talentera-logo.svg
-          echo "logo_bytes=$(wc -c </tmp/talentera-logo.svg)"
-          echo 'LOGO_BASE64_START'
-          base64 -w1000 /tmp/talentera-logo.svg
-          echo 'LOGO_BASE64_END'
+
+      - name: Vendor official Talentera logo
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          curl --fail --silent --show-error --location --max-time 30 'https://talimg1.b8cdn.com/wp-content/themes/talentera-2018/images/new-design/Talentera-ATS-white-logo.svg' -o public/talentera-logo.svg
+          test -s public/talentera-logo.svg
+          grep -q '<svg' public/talentera-logo.svg
+          if git diff --quiet -- public/talentera-logo.svg && git ls-files --error-unmatch public/talentera-logo.svg >/dev/null 2>&1; then
+            echo 'Logo already vendored.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/talentera-logo.svg
+          git commit -m 'Vendor official Talentera logo'
+          git push origin HEAD:${{ github.head_ref }}
