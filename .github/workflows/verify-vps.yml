@@ -51,20 +51,43 @@ jobs:
           fi
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Verify root SSH and VPS prerequisites
+      - name: Diagnose root SSH and VPS prerequisites
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           set -euo pipefail
           ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
-          set -euo pipefail
-          command -v git >/dev/null
-          command -v docker >/dev/null
-          docker compose version >/dev/null
-          docker network inspect n8n_default >/dev/null
-          test -f /root/P-L/.env
-          grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' /root/P-L/.env
-          echo "VPS connectivity and P&L prerequisites are ready."
-          REMOTE
+          set -u
+          failed=0
 
-# Verification rerun requested after authorized_keys update.
+          check_command() {
+            label="$1"
+            shift
+            if "$@" >/dev/null 2>&1; then
+              echo "PASS: $label"
+            else
+              echo "FAIL: $label"
+              failed=1
+            fi
+          }
+
+          check_command "git installed" command -v git
+          check_command "docker installed" command -v docker
+          check_command "docker compose available" docker compose version
+          check_command "Traefik network n8n_default exists" docker network inspect n8n_default
+
+          if [ -f /root/P-L/.env ]; then
+            echo "PASS: /root/P-L/.env exists"
+            if grep -Eq '^PNL_DATA_INGEST_TOKEN=.{32,}$' /root/P-L/.env; then
+              echo "PASS: PNL_DATA_INGEST_TOKEN is configured"
+            else
+              echo "FAIL: PNL_DATA_INGEST_TOKEN is missing or too short"
+              failed=1
+            fi
+          else
+            echo "FAIL: /root/P-L/.env is missing"
+            failed=1
+          fi
+
+          exit "$failed"
+          REMOTE
