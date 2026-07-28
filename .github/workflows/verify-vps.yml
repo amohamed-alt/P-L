@@ -12,29 +12,22 @@ jobs:
   bootstrap-pnl:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure SSH
+      - name: Configure SSH key
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           test "$VPS_HOST" = "187.77.2.175"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          if [ -n "$VPS_KNOWN_HOSTS" ]; then
-            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          else
-            ssh-keyscan -T 15 -H "$VPS_HOST" > ~/.ssh/known_hosts
-          fi
-          chmod 600 ~/.ssh/known_hosts
 
       - name: Bootstrap and deploy P&L
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
-          ssh -o BatchMode=yes -o ConnectTimeout=15 -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "root@$VPS_HOST" 'bash -se' <<'REMOTE'
           set -euo pipefail
 
           REPO_DIR=/root/P-L
