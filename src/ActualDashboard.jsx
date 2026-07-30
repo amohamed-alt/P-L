@@ -1,5 +1,5 @@
 import { BadgeDollarSign, ChartNoAxesCombined, CircleDollarSign, Coins, ShieldCheck, Target, WalletCards } from 'lucide-react';
-import { generateInsights, statusFor } from './dashboard';
+import { generateInsights, statusFor, variance } from './dashboard';
 import { KpiCard, StatusBadge, compactMoney, deltaLabel, formatPercent } from './ui';
 import { CostComparison, CostDonut, CoveragePanel, MonthlyPerformance, PeriodComparison } from './ActualCharts';
 import { Insights, MonthlyMatrix } from './ActualDetails';
@@ -26,9 +26,15 @@ export function ActualDashboard({ data, filters, snapshot, monthlyRows, setFilte
 
       <section id="overview" className="kpi-grid">
         {metrics.map((metric) => {
+          const current = Number(metric.value || 0);
+          const prior = Number(metric.prior || 0);
           const statusMetric = metric.metric || metric.key;
-          const tone = statusFor(statusMetric, metric.value || 0, metric.prior || 0);
-          return <KpiCard key={metric.label} label={metric.label} icon={metric.icon} tone={tone} value={metric.key === 'ratio' ? formatPercent(metric.value) : compactMoney(metric.value, currency)} delta={deltaLabel(metric.value || 0, metric.prior || 0, metric.key, currency)} helper={metric.helper} status={metric.key === 'cashGap' ? (metric.value >= 0 ? 'Surplus' : 'Gap') : undefined} />;
+          const tone = statusFor(statusMetric, current, prior);
+          const change = variance(current, prior);
+          const direction = change.absolute > 0 ? 'up' : change.absolute < 0 ? 'down' : 'flat';
+          const includePercent = ['booking', 'cashing', 'totalCost'].includes(metric.key);
+
+          return <KpiCard key={metric.label} label={metric.label} icon={metric.icon} tone={tone} direction={direction} value={metric.key === 'ratio' ? formatPercent(metric.value) : compactMoney(metric.value, currency)} delta={deltaLabel(current, prior, metric.key, currency, includePercent)} helper={metric.helper} status={metric.key === 'cashGap' ? (metric.value >= 0 ? 'Surplus' : 'Gap') : undefined} />;
         })}
       </section>
 
