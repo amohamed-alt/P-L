@@ -5,14 +5,16 @@ export const COLORS = {
   green: '#087a50',
   greenDark: '#0e4b3e',
   greenSoft: '#dff1e7',
-  blue: '#3a7de0',
+  blue: '#356fbd',
   blueSoft: '#dce8fa',
-  purple: '#744bc4',
+  purple: '#7a55b3',
   amber: '#d98d25',
   red: '#df5a4b',
   teal: '#1aa6a0',
   slate: '#63776e',
-  baseline: '#a8b8c8',
+  baseline: '#5578a6',
+  baselineBooking: '#356fbd',
+  baselineCashing: '#7a55b3',
 };
 
 export const ACTUAL_NAV = [
@@ -59,11 +61,16 @@ export function axisMoney(value, currency) {
   return compactMoney(value, currency).replace('.0', '');
 }
 
-export function deltaLabel(current, prior, metric, currency) {
+export function deltaLabel(current, prior, metric, currency, includePercent = false) {
   const change = variance(current, prior);
   if (change.percent === null) return 'No baseline';
   if (metric === 'ratio') return `${change.absolute >= 0 ? '+' : ''}${(change.absolute * 100).toFixed(1)} pts`;
-  return `${change.absolute >= 0 ? '+' : ''}${compactMoney(change.absolute, currency)}`;
+
+  const money = `${change.absolute >= 0 ? '+' : ''}${compactMoney(change.absolute, currency)}`;
+  if (!includePercent) return money;
+
+  const percent = `${change.percent >= 0 ? '+' : ''}${(change.percent * 100).toFixed(1)}%`;
+  return `${money} · ${percent}`;
 }
 
 export function ChartTooltip({ active, payload, label, currency, percent = false }) {
@@ -102,8 +109,9 @@ export function StatusBadge({ children, tone = 'good' }) {
   return <span className={`status-badge ${tone}`}>{children}</span>;
 }
 
-export function KpiCard({ label, value, helper, delta, tone, icon: Icon, status }) {
-  const DeltaIcon = tone === 'positive' ? ArrowUpRight : tone === 'negative' ? ArrowDownRight : Activity;
+export function KpiCard({ label, value, helper, delta, tone, direction, icon: Icon, status }) {
+  const resolvedDirection = direction || (tone === 'positive' ? 'up' : tone === 'negative' ? 'down' : 'flat');
+  const DeltaIcon = resolvedDirection === 'up' ? ArrowUpRight : resolvedDirection === 'down' ? ArrowDownRight : Activity;
   return (
     <article className={`kpi-card tone-${tone}`}>
       <div className="kpi-header">
