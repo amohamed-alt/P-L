@@ -31,15 +31,15 @@ export function MonthlyPerformance({ rows, filters, currency }) {
   const percentChart = ['cashCoverage', 'bookingToCash'].includes(filters.metricFocus);
   const dataKeys = (() => {
     if (filters.metricFocus === 'commercial') return [
-      { key: 'bookingBaseline', name: `Booking ${filters.baselineYear}`, color: COLORS.baseline, dash: '5 5' },
-      { key: 'cashingBaseline', name: `Cashing ${filters.baselineYear}`, color: '#ccd7e2', dash: '5 5' },
-      { key: 'bookingComparison', name: `Booking ${filters.comparisonYear}`, color: COLORS.greenDark },
-      { key: 'cashingComparison', name: `Cashing ${filters.comparisonYear}`, color: COLORS.green },
+      { key: 'bookingBaseline', name: `Booking ${filters.baselineYear}`, color: COLORS.baselineBooking, dash: '7 5', width: 2.7 },
+      { key: 'cashingBaseline', name: `Cashing ${filters.baselineYear}`, color: COLORS.baselineCashing, dash: '7 5', width: 2.7 },
+      { key: 'bookingComparison', name: `Booking ${filters.comparisonYear}`, color: COLORS.greenDark, width: 3.2 },
+      { key: 'cashingComparison', name: `Cashing ${filters.comparisonYear}`, color: COLORS.green, width: 3.2 },
     ];
     const prefix = filters.metricFocus === 'booking' ? 'booking' : filters.metricFocus === 'cashing' ? 'cashing' : filters.metricFocus === 'totalCost' ? 'cost' : filters.metricFocus;
     return [
-      { key: `${prefix}Baseline`, name: `${filters.baselineYear}`, color: COLORS.baseline, dash: '5 5' },
-      { key: `${prefix}Comparison`, name: `${filters.comparisonYear}`, color: COLORS.green },
+      { key: `${prefix}Baseline`, name: `${filters.baselineYear}`, color: COLORS.blue, dash: '7 5', width: 2.7 },
+      { key: `${prefix}Comparison`, name: `${filters.comparisonYear}`, color: COLORS.green, width: 3.2 },
     ];
   })();
   return (
@@ -50,11 +50,11 @@ export function MonthlyPerformance({ rows, filters, currency }) {
         <XAxis dataKey="month" tick={{ fill: '#63776e', fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={percentChart ? (value) => `${Math.round(value * 100)}%` : (value) => axisMoney(value, currency)} tick={{ fill: '#819188', fontSize: 10 }} axisLine={false} tickLine={false} width={70} domain={[0, 'auto']} />
         <Tooltip content={<ChartTooltip currency={currency} percent={percentChart} />} />
-        <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 12 }} />
+        <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 12, fontWeight: 700 }} />
         {dataKeys.map((line, index) => index === dataKeys.length - 1 && dataKeys.length === 2 ? (
-          <Area key={line.key} type="monotone" dataKey={line.key} name={line.name} stroke={line.color} fill="url(#comparisonArea)" strokeWidth={3} connectNulls dot={{ r: 3, fill: line.color }} />
+          <Area key={line.key} type="monotone" dataKey={line.key} name={line.name} stroke={line.color} fill="url(#comparisonArea)" strokeWidth={line.width} connectNulls dot={{ r: 3, fill: line.color, strokeWidth: 0 }} activeDot={{ r: 5 }} />
         ) : (
-          <Line key={line.key} type="monotone" dataKey={line.key} name={line.name} stroke={line.color} strokeWidth={index >= Math.max(1, dataKeys.length - 2) ? 3 : 2} strokeDasharray={line.dash} connectNulls dot={{ r: 2.5, fill: line.color }} activeDot={{ r: 5 }} />
+          <Line key={line.key} type="monotone" dataKey={line.key} name={line.name} stroke={line.color} strokeWidth={line.width} strokeDasharray={line.dash} connectNulls dot={{ r: 3, fill: line.color, strokeWidth: 0 }} activeDot={{ r: 5 }} />
         ))}
       </ComposedChart>
     </ResponsiveContainer>
