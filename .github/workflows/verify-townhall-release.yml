@@ -37,11 +37,11 @@ jobs:
           git checkout main
           git reset --hard origin/main
           test "$(git rev-parse HEAD)" = "cd2ced1f31ea04af03578279f9daeca00756e5db"
-          grep -q "includePercent = \['booking', 'cashing', 'totalCost'\]" src/ActualDashboard.jsx
-          grep -q "direction={direction}" src/ActualDashboard.jsx
-          grep -q "baselineBooking: '#356fbd'" src/ui.jsx
-          grep -q "baselineCashing: '#7a55b3'" src/ui.jsx
-          grep -q "return \`${money} · ${percent}\`" src/ui.jsx
+          grep -Fq "const includePercent = ['booking', 'cashing', 'totalCost'].includes(metric.key);" src/ActualDashboard.jsx
+          grep -Fq 'direction={direction}' src/ActualDashboard.jsx
+          grep -Fq "baselineBooking: '#356fbd'" src/ui.jsx
+          grep -Fq "baselineCashing: '#7a55b3'" src/ui.jsx
+          grep -Fq 'return `${money} · ${percent}`;' src/ui.jsx
           docker compose config --quiet
           docker compose up -d --build --remove-orphans
           for attempt in $(seq 1 45); do
