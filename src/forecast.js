@@ -82,7 +82,10 @@ export function calculateForecast(actualData, payload) {
   const forecastCashing = forecastRows.reduce((sum, row) => sum + row.cashing, 0);
   const fullYearBooking = actualBooking + forecastBooking;
   const fullYearCashing = actualCashing + forecastCashing;
+
+  const operatingResultExSupport = fullYearBooking - projectedExpenses;
   const operatingResult = fullYearBooking - annualCost;
+  const cashSurplusExSupport = fullYearCashing - projectedExpenses;
   const cashSurplus = fullYearCashing - annualCost;
 
   return {
@@ -102,8 +105,12 @@ export function calculateForecast(actualData, payload) {
     annualCost,
     monthlyExpensesExSupport,
     monthlyCost,
+    operatingResultExSupport,
+    operatingMarginExSupport: safeDivide(operatingResultExSupport, fullYearBooking),
     operatingResult,
     operatingMargin: safeDivide(operatingResult, fullYearBooking),
+    cashSurplusExSupport,
+    cashCoverageExSupport: safeDivide(fullYearCashing, projectedExpenses),
     cashSurplus,
     cashCoverage: safeDivide(fullYearCashing, annualCost),
     bookingToCash: safeDivide(fullYearCashing, fullYearBooking),

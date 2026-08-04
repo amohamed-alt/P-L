@@ -7,18 +7,37 @@ import { COLORS, ChartTooltip, KpiCard, Section, StatusBadge, formatPercent, ful
 export function ForecastDashboard({ forecast }) {
   const [metric, setMetric] = useState('booking');
   const currency = forecast.currency;
-  const cards = [
+
+  const planningCards = [
     { label: 'Full-Year Booking', value: forecast.fullYearBooking, helper: `${fullMoney(forecast.actualBooking, currency)} actual + ${fullMoney(forecast.forecastBooking, currency)} forecast`, icon: BadgeDollarSign, tone: 'positive' },
     { label: 'Full-Year Cashing', value: forecast.fullYearCashing, helper: `${formatPercent(forecast.bookingToCash)} booking-to-cash`, icon: WalletCards, tone: 'positive' },
     { label: 'Projected Expenses', value: forecast.projectedExpenses, helper: 'Excluding support allocation', icon: Coins, tone: 'neutral' },
     { label: 'Total Cost Incl. Support', value: forecast.annualCost, helper: `${fullMoney(forecast.supportAllocation, currency)} support allocation`, icon: Layers3, tone: 'neutral' },
-    { label: 'Operating Result', value: forecast.operatingResult, helper: `${formatPercent(forecast.operatingMargin)} margin after support allocation`, icon: ChartNoAxesCombined, tone: forecast.operatingResult >= 0 ? 'positive' : 'negative' },
-    { label: 'Cash Surplus', value: forecast.cashSurplus, helper: `${formatPercent(forecast.cashCoverage)} coverage after support allocation`, icon: CircleDollarSign, tone: forecast.cashSurplus >= 0 ? 'positive' : 'negative' },
   ];
+
+  const resultCards = [
+    { label: 'Operating Result Excl. Support', value: forecast.operatingResultExSupport, helper: `${formatPercent(forecast.operatingMarginExSupport)} margin before support allocation`, icon: ChartNoAxesCombined, tone: forecast.operatingResultExSupport >= 0 ? 'positive' : 'negative' },
+    { label: 'Operating Result Incl. Support', value: forecast.operatingResult, helper: `${formatPercent(forecast.operatingMargin)} margin after support allocation`, icon: ChartNoAxesCombined, tone: forecast.operatingResult >= 0 ? 'positive' : 'negative' },
+    { label: 'Cash Surplus Excl. Support', value: forecast.cashSurplusExSupport, helper: `${formatPercent(forecast.cashCoverageExSupport)} coverage before support allocation`, icon: CircleDollarSign, tone: forecast.cashSurplusExSupport >= 0 ? 'positive' : 'negative' },
+    { label: 'Cash Surplus Incl. Support', value: forecast.cashSurplus, helper: `${formatPercent(forecast.cashCoverage)} coverage after support allocation`, icon: CircleDollarSign, tone: forecast.cashSurplus >= 0 ? 'positive' : 'negative' },
+  ];
+
   const forecastMonths = MONTHS.slice(Number(forecast.payload.metadata.forecastStartMonthNumber) - 1, Number(forecast.payload.metadata.forecastEndMonthNumber));
   const ownerRows = forecast.payload[metric] || [];
   const expected = forecast.payload.expectedTotals || {};
   const reconciled = Math.round(metric === 'booking' ? forecast.forecastBooking : forecast.forecastCashing) === Math.round(Number(metric === 'booking' ? expected.forecastBooking : expected.forecastCashing));
+
+  const renderCard = (card) => (
+    <KpiCard
+      key={card.label}
+      label={card.label}
+      icon={card.icon}
+      tone={card.tone}
+      value={fullMoney(card.value, currency)}
+      delta={card.tone === 'positive' ? 'On track' : card.tone === 'negative' ? 'Attention' : 'Plan'}
+      helper={card.helper}
+    />
+  );
 
   return (
     <>
@@ -27,7 +46,13 @@ export function ForecastDashboard({ forecast }) {
         <div className="forecast-orbit"><i /><strong>{formatPercent(forecast.cashCoverage)}</strong><span>Coverage after support allocation</span></div>
       </div>
 
-      <section className="kpi-grid">{cards.map((card) => <KpiCard key={card.label} label={card.label} icon={card.icon} tone={card.tone} value={fullMoney(card.value, currency)} delta={card.tone === 'positive' ? 'On track' : card.tone === 'negative' ? 'Attention' : 'Plan'} helper={card.helper} />)}</section>
+      <section className="kpi-grid forecast-plan-grid">{planningCards.map(renderCard)}</section>
+
+      <div className="forecast-result-heading">
+        <div><span className="eyebrow">PROFITABILITY &amp; CASH POSITION</span><h2>Before and after support allocation</h2></div>
+        <StatusBadge tone="info">Support impact {fullMoney(forecast.supportAllocation, currency)}</StatusBadge>
+      </div>
+      <section className="kpi-grid forecast-result-grid">{resultCards.map(renderCard)}</section>
 
       <div className="dashboard-grid two-column">
         <Section title="Monthly Actual + Forecast" description="January–July uses live actuals; August–December uses the supplied forecast. The two lines show cost before and after support allocation.">
@@ -41,8 +66,6 @@ export function ForecastDashboard({ forecast }) {
       <Section title={`${metric === 'booking' ? 'Booking' : 'Cashing'} Forecast by Owner`} description={`${forecast.payload.metadata.forecastStartMonth}–${forecast.payload.metadata.forecastEndMonth} supplied forecast values.`} action={<select className="inline-select" value={metric} onChange={(event) => setMetric(event.target.value)}><option value="booking">Booking forecast</option><option value="cashing">Cashing forecast</option></select>}>
         <div className="table-shell forecast-table"><table><thead><tr><th>Owner</th>{forecastMonths.map((month) => <th key={month}>{month}</th>)}<th>Total</th></tr></thead><tbody>{ownerRows.map((row) => <tr key={row.owner}><td><strong>{row.owner}</strong></td>{row.monthly.map((value, index) => <td key={`${row.owner}-${index}`}>{fullMoney(value, currency)}</td>)}<td><strong>{fullMoney(row.monthly.reduce((sum, value) => sum + Number(value || 0), 0), currency)}</strong></td></tr>)}</tbody></table></div>
       </Section>
-
-      <div className="dashboard-grid three-column forecast-position-grid"><article className="position-card"><span>Projected booking position</span><strong>{fullMoney(forecast.operatingResult, currency)}</strong><small>Booking less total cost incl. support</small></article><article className="position-card"><span>Projected cash position</span><strong>{fullMoney(forecast.cashSurplus, currency)}</strong><small>Cashing less total cost incl. support</small></article><article className="position-card"><span>Conversion efficiency</span><strong>{formatPercent(forecast.bookingToCash)}</strong><small>Full-year cashing ÷ booking</small></article></div>
     </>
   );
 }
