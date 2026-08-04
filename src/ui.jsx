@@ -30,7 +30,7 @@ export function compactMoney(value, currency) {
     style: 'currency',
     currency,
     notation: 'compact',
-    maximumFractionDigits: 1,
+    maximumFractionDigits: 2,
   }).format(Number(value));
 }
 
