@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarRange, ChartNoAxesCombined, ChevronDown, Database, Download, Filter, Gauge, Menu, Printer, RefreshCw, ShieldCheck, X } from 'lucide-react';
-import { buildMonthlyRows, buildSnapshot, calculateForecast, defaultFilters, downloadCsv, normalizeDashboard } from './dashboard';
+import { buildMonthlyRows, buildSnapshot, defaultFilters, downloadCsv, normalizeDashboard } from './dashboard';
+import { calculateForecast } from './forecast';
 import { ACTUAL_NAV, ErrorScreen, FilterPanel, LoadingScreen, StatusBadge, shortTimestamp } from './ui';
 import { ActualDashboard } from './ActualDashboard';
 import { ForecastDashboard } from './ForecastDashboard';
-
 
 export function App() {
   const [data, setData] = useState(null);
@@ -58,7 +58,10 @@ export function App() {
 
   const exportCurrent = () => {
     if (view === 'forecast' && forecast) {
-      downloadCsv(`pnl-forecast-${forecast.year}.csv`, [['Month', 'Status', 'Booking', 'Cashing', 'Cost'], ...forecast.monthly.map((row) => [row.month, row.status, row.booking, row.cashing, row.cost])]);
+      downloadCsv(`pnl-forecast-${forecast.year}.csv`, [
+        ['Month', 'Status', 'Booking', 'Cashing', 'Expenses Excl. Support', 'Total Cost Incl. Support'],
+        ...forecast.monthly.map((row) => [row.month, row.status, row.booking, row.cashing, row.costExSupport, row.costWithSupport]),
+      ]);
       return;
     }
     if (!data || !filters) return;
