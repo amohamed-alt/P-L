@@ -1,6 +1,6 @@
 import { BadgeDollarSign, ChartNoAxesCombined, CircleDollarSign, Coins, ShieldCheck, Target, WalletCards } from 'lucide-react';
 import { generateInsights, statusFor, variance } from './dashboard';
-import { KpiCard, StatusBadge, compactMoney, deltaLabel, formatPercent } from './ui';
+import { KpiCard, StatusBadge, deltaLabel, formatPercent, fullMoney } from './ui';
 import { CostComparison, CostDonut, CoveragePanel, MonthlyPerformance, PeriodComparison } from './ActualCharts';
 import { Insights, MonthlyMatrix } from './ActualDetails';
 
@@ -29,12 +29,24 @@ export function ActualDashboard({ data, filters, snapshot, monthlyRows, setFilte
           const current = Number(metric.value || 0);
           const prior = Number(metric.prior || 0);
           const statusMetric = metric.metric || metric.key;
-          const tone = statusFor(statusMetric, current, prior);
           const change = variance(current, prior);
           const direction = change.absolute > 0 ? 'up' : change.absolute < 0 ? 'down' : 'flat';
           const includePercent = ['booking', 'cashing', 'totalCost'].includes(metric.key);
+          const strictCommercialTone = ['booking', 'cashing'].includes(metric.key)
+            ? (current > prior ? 'positive' : current < prior ? 'negative' : 'neutral')
+            : metric.key === 'totalCost'
+              ? (current < prior ? 'positive' : current > prior ? 'negative' : 'neutral')
+              : null;
+          const tone = strictCommercialTone || statusFor(statusMetric, current, prior);
+          const exactMoneyDelta = `${change.absolute >= 0 ? '+' : ''}${fullMoney(change.absolute, currency)}`;
+          const percentDelta = change.percent === null ? null : `${change.percent >= 0 ? '+' : ''}${(change.percent * 100).toFixed(1)}%`;
+          const delta = metric.key === 'ratio'
+            ? deltaLabel(current, prior, metric.key, currency)
+            : includePercent && percentDelta
+              ? `${exactMoneyDelta} · ${percentDelta}`
+              : exactMoneyDelta;
 
-          return <KpiCard key={metric.label} label={metric.label} icon={metric.icon} tone={tone} direction={direction} value={metric.key === 'ratio' ? formatPercent(metric.value) : compactMoney(metric.value, currency)} delta={deltaLabel(current, prior, metric.key, currency, includePercent)} helper={metric.helper} status={metric.key === 'cashGap' ? (metric.value >= 0 ? 'Surplus' : 'Gap') : undefined} />;
+          return <KpiCard key={metric.label} label={metric.label} icon={metric.icon} tone={tone} direction={direction} value={metric.key === 'ratio' ? formatPercent(metric.value) : fullMoney(metric.value, currency)} delta={delta} helper={metric.helper} status={metric.key === 'cashGap' ? (metric.value >= 0 ? 'Surplus' : 'Gap') : undefined} />;
         })}
       </section>
 
