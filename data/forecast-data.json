@@ -1,48 +1,53 @@
 {
   "metadata": {
     "year": 2026,
-    "generatedAt": "2026-06-21T00:00:00.000Z",
+    "generatedAt": "2026-08-04T10:54:00.000Z",
     "source": "manual-forecast-sheet",
     "currency": "USD",
-    "actualThroughMonthNumber": 5,
-    "actualThroughMonth": "May",
-    "forecastStartMonthNumber": 6,
-    "forecastStartMonth": "June",
+    "actualThroughMonthNumber": 7,
+    "actualThroughMonth": "July",
+    "forecastStartMonthNumber": 8,
+    "forecastStartMonth": "August",
     "forecastEndMonthNumber": 12,
     "forecastEndMonth": "December",
-    "basis": "Actual January-May plus forecast June-December",
-    "note": "June MTD from the live dashboard is excluded to avoid double counting against the June forecast."
+    "basis": "Actual January-July plus forecast August-December",
+    "note": "June and July are read from the live actual dataset. August remains forecast because the current August actual is partial."
   },
   "costPlan": {
-    "annualCost": 3773275,
-    "displayMonthlyCost": 314440,
-    "calculationMonthlyCost": 314439.5833333333
+    "projectedExpenses": 3665475,
+    "supportAllocation": 888000,
+    "annualCostWithSupport": 4553475,
+    "annualCost": 4553475,
+    "monthlyExpensesExSupport": 305456.25,
+    "monthlyCostWithSupport": 379456.25
   },
   "booking": [
-    { "owner": "Fadi", "monthly": [203822, 181375, 0, 43835, 113468, 149335, 326069] },
-    { "owner": "Jehad", "monthly": [184801, 172433, 50733, 5500, 13167, 74635, 31500] },
-    { "owner": "Faizan", "monthly": [119250, 89282, 154950, 185680, 64251, 2000, 66381] },
-    { "owner": "Fadi Acq.", "monthly": [0, 0, 0, 0, 0, 60000, 0] },
-    { "owner": "Jehad Acq.", "monthly": [125000, 0, 0, 22000, 0, 0, 0] },
-    { "owner": "Faizan Acq.", "monthly": [8000, 0, 0, 0, 27000, 0, 0] },
-    { "owner": "Zein", "monthly": [18000, 20000, 30000, 22000, 28000, 30000, 30000] },
-    { "owner": "Ursula", "monthly": [16560, 14000, 30000, 25000, 27000, 20000, 20000] },
-    { "owner": "Marita", "monthly": [10000, 10000, 12000, 10000, 13000, 10000, 10000] }
+    { "owner": "Fadi", "monthly": [176540, 43835, 113468, 149335, 326069] },
+    { "owner": "Jehad", "monthly": [143584, 5500, 13167, 74635, 31500] },
+    { "owner": "Faizan", "monthly": [109237, 185680, 64251, 2000, 66381] },
+    { "owner": "Fadi Acq.", "monthly": [0, 0, 0, 60000, 0] },
+    { "owner": "Jehad Acq.", "monthly": [0, 22000, 0, 0, 0] },
+    { "owner": "Faizan Acq.", "monthly": [0, 0, 27000, 0, 0] },
+    { "owner": "Zein", "monthly": [30000, 22000, 28000, 30000, 30000] },
+    { "owner": "Ursula", "monthly": [30000, 25000, 27000, 20000, 20000] },
+    { "owner": "Marita", "monthly": [12000, 10000, 13000, 10000, 10000] }
   ],
   "cashing": [
-    { "owner": "Fadi", "monthly": [184336, 130000, 252241, 101533, 237350, 340688, 171109] },
-    { "owner": "Jehad", "monthly": [15120, 158400, 357133, 188983, 0, 70600, 31500] },
-    { "owner": "Faizan", "monthly": [100000, 105400, 90000, 120250, 165300, 160500, 110000] },
-    { "owner": "Fadi Acq.", "monthly": [0, 0, 112000, 0, 0, 0, 0] },
-    { "owner": "Jehad Acq.", "monthly": [0, 150000, 0, 0, 0, 0, 0] },
-    { "owner": "Faizan Acq.", "monthly": [0, 0, 8000, 0, 0, 0, 27000] },
-    { "owner": "Zein", "monthly": [0, 35093, 18000, 20000, 30000, 22000, 28000] },
-    { "owner": "Ursula", "monthly": [8000, 15560, 22000, 27500, 26000, 28500, 25000] },
-    { "owner": "Marita", "monthly": [0, 10000, 12000, 10000, 13000, 10000, 10000] }
+    { "owner": "Fadi", "monthly": [116517, 101533, 237350, 340688, 171109] },
+    { "owner": "Jehad", "monthly": [234670, 188983, 0, 70600, 31500] },
+    { "owner": "Faizan", "monthly": [185945, 120250, 165300, 160500, 110000] },
+    { "owner": "Fadi Acq.", "monthly": [112000, 0, 0, 0, 0] },
+    { "owner": "Jehad Acq.", "monthly": [0, 0, 0, 0, 0] },
+    { "owner": "Faizan Acq.", "monthly": [8000, 0, 0, 0, 27000] },
+    { "owner": "Zein", "monthly": [18000, 20000, 30000, 22000, 28000] },
+    { "owner": "Ursula", "monthly": [22000, 27500, 26000, 28500, 25000] },
+    { "owner": "Marita", "monthly": [12000, 10000, 13000, 10000, 10000] }
   ],
   "expectedTotals": {
-    "forecastBooking": 2880027,
-    "forecastCashing": 3758096,
-    "annualCost": 3773275
+    "forecastBooking": 1931182,
+    "forecastCashing": 2683945,
+    "projectedExpenses": 3665475,
+    "supportAllocation": 888000,
+    "annualCostWithSupport": 4553475
   }
 }
