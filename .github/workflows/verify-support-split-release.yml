@@ -1,0 +1,100 @@
+name: Verify Support Split Release
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+    steps:
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Deploy and verify support split on VPS
+        run: |
+          set -euo pipefail
+          VPS_USER="${VPS_USER:-root}"
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /root/P-L
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "aa9d813290679568444c55721b03ce63e89786f7"
+          grep -q "operatingResultExSupport" src/forecast.js
+          grep -q "cashSurplusExSupport" src/forecast.js
+          grep -q "Operating Result Excl. Support" src/ForecastDashboard.jsx
+          grep -q "Cash Surplus Incl. Support" src/ForecastDashboard.jsx
+
+          node <<'NODE'
+          const fs = require('fs');
+          const actual = JSON.parse(fs.readFileSync('/root/P-L-runtime/data/dashboard-data.json', 'utf8'));
+          const forecast = JSON.parse(fs.readFileSync('data/forecast-data.json', 'utf8'));
+          const rows = actual.monthlyData.filter((row) => Number(row.year) === 2026 && Number(row.monthNumber) <= 7);
+          const actualBooking = rows.reduce((sum, row) => sum + Number(row.booking || 0), 0);
+          const actualCashing = rows.reduce((sum, row) => sum + Number(row.cashing || 0), 0);
+          const forecastBooking = forecast.booking.reduce((sum, owner) => sum + owner.monthly.reduce((a, b) => a + Number(b || 0), 0), 0);
+          const forecastCashing = forecast.cashing.reduce((sum, owner) => sum + owner.monthly.reduce((a, b) => a + Number(b || 0), 0), 0);
+          const fullYearBooking = actualBooking + forecastBooking;
+          const fullYearCashing = actualCashing + forecastCashing;
+          const projectedExpenses = Number(forecast.costPlan.projectedExpenses);
+          const totalCost = Number(forecast.costPlan.annualCostWithSupport);
+          const values = {
+            operatingResultExSupport: Math.round(fullYearBooking - projectedExpenses),
+            operatingResultInclSupport: Math.round(fullYearBooking - totalCost),
+            cashSurplusExSupport: Math.round(fullYearCashing - projectedExpenses),
+            cashSurplusInclSupport: Math.round(fullYearCashing - totalCost),
+          };
+          const expected = {
+            operatingResultExSupport: 1203806,
+            operatingResultInclSupport: 315806,
+            cashSurplusExSupport: 1041761,
+            cashSurplusInclSupport: 153761,
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (values[key] !== value) throw new Error(`${key}: expected ${value}, received ${values[key]}`);
+          }
+          console.log(values);
+          NODE
+
+          docker compose config --quiet
+          docker compose up -d --build --remove-orphans
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --show-error http://127.0.0.1:3020/api/health >/tmp/health.json 2>/dev/null; then
+              node -e "const p=require('/tmp/health.json'); if(p.version!==2) process.exit(1)" && break
+            fi
+            if [ "$attempt" = "45" ]; then
+              docker compose logs --tail=180 pnl-dashboard
+              exit 1
+            fi
+            sleep 3
+          done
+          docker compose ps
+          REMOTE
+
+      - name: Verify public HTTPS
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error --retry 2 --retry-all-errors --max-time 25 https://pnl.dashboardtalentera.tech/api/health >/tmp/public-health.json; then
+              node -e "const p=require('/tmp/public-health.json'); if(p.version!==2) process.exit(1)"
+              echo 'Support split release is live and healthy.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
