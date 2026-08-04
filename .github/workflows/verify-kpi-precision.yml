@@ -39,7 +39,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "ea568018117051b5ddcda8979c6af0f8b9ea3af1"
           grep -q 'maximumFractionDigits: 2' src/ui.jsx
           docker compose config --quiet
-          docker ps -a --format '{{.Names}}' | grep -E '^[[:alnum:]]+_pnl-dashboard-pnl-dashboard-1$' | xargs -r docker rm -f
+          stale_containers="$(docker ps -a --format '{{.Names}}' | grep -E '^[[:alnum:]]+_pnl-dashboard-pnl-dashboard-1$' || true)"
+          if [ -n "$stale_containers" ]; then
+            printf '%s\n' "$stale_containers" | xargs -r docker rm -f
+          fi
           docker compose up -d --build --remove-orphans
           for attempt in $(seq 1 45); do
             if curl --fail --silent --show-error http://127.0.0.1:3020/api/health >/tmp/health.json 2>/dev/null; then
