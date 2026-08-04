@@ -32,12 +32,7 @@ export function ActualDashboard({ data, filters, snapshot, monthlyRows, setFilte
           const change = variance(current, prior);
           const direction = change.absolute > 0 ? 'up' : change.absolute < 0 ? 'down' : 'flat';
           const includePercent = ['booking', 'cashing', 'totalCost'].includes(metric.key);
-          const strictCommercialTone = ['booking', 'cashing'].includes(metric.key)
-            ? (current > prior ? 'positive' : current < prior ? 'negative' : 'neutral')
-            : metric.key === 'totalCost'
-              ? (current < prior ? 'positive' : current > prior ? 'negative' : 'neutral')
-              : null;
-          const tone = strictCommercialTone || statusFor(statusMetric, current, prior);
+          const tone = statusFor(statusMetric, current, prior);
           const exactMoneyDelta = `${change.absolute >= 0 ? '+' : ''}${fullMoney(change.absolute, currency)}`;
           const percentDelta = change.percent === null ? null : `${change.percent >= 0 ? '+' : ''}${(change.percent * 100).toFixed(1)}%`;
           const delta = metric.key === 'ratio'
