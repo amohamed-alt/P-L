@@ -1,0 +1,67 @@
+name: Verify KPI Precision Release
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_SSH_KEY"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Verify deployed main on VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          VPS_USER="${VPS_USER:-root}"
+          ssh -o BatchMode=yes -o ConnectTimeout=30 -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "$VPS_USER@$VPS_HOST" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          cd /root/P-L
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          test "$(git rev-parse HEAD)" = "ea568018117051b5ddcda8979c6af0f8b9ea3af1"
+          grep -q 'maximumFractionDigits: 2' src/ui.jsx
+          docker compose config --quiet
+          docker compose up -d --build --remove-orphans
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --show-error http://127.0.0.1:3020/api/health >/tmp/health.json 2>/dev/null; then
+              node -e "const p=require('/tmp/health.json'); if(p.version!==2) process.exit(1)" && break
+            fi
+            if [ "$attempt" = "45" ]; then
+              docker compose logs --tail=180 pnl-dashboard
+              exit 1
+            fi
+            sleep 3
+          done
+          docker compose ps
+          REMOTE
+
+      - name: Verify public HTTPS
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            if curl --fail --silent --show-error --retry 2 --retry-all-errors --max-time 25 https://pnl.dashboardtalentera.tech/api/health >/tmp/public-health.json; then
+              node -e "const p=require('/tmp/public-health.json'); if(p.version!==2) process.exit(1)"
+              echo 'KPI precision release is live and healthy.'
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
