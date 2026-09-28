@@ -120,8 +120,9 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/api/health >/dev/null; then
-              echo "Public P&L HTTPS endpoint is healthy and trusted."
+            if curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/api/health >/dev/null \
+              && curl --fail --silent --show-error --location --max-time 20 https://pnl.dashboardtalentera.tech/ >/dev/null; then
+              echo "Public P&L health endpoint and dashboard homepage are healthy and trusted."
               exit 0
             fi
             sleep 3
