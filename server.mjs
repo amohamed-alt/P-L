@@ -257,7 +257,7 @@ async function handleRequest(request, response) {
     return;
   }
   if (await fileExists(staticPath)) {
-    await serveFile(request, response, staticPath, url.pathname === '/' || url.pathname.endsWith('.html'));
+    await serveFile(request, response, staticPath, url.pathname === '/' || url.pathname.endsWith('.html') || staticPath.startsWith(`${resolve(STATIC_DIR, 'data')}${sep}`));
     return;
   }
   if (!extname(url.pathname)) {
