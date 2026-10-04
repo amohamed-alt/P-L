@@ -28,6 +28,12 @@ Dashboard code is deployed from GitHub. Live financial data is not written to Gi
 
 ## Dashboard capabilities
 
+### Acquisition and retention
+
+The actual-performance view accepts an optional `customerMix` summary with two year columns and Acquisition, Retention and Total rows. It displays source YTD booking amounts without applying the dashboard date filters to a pre-aggregated source range. Invalid values and unreconciled totals are rejected by the ingest API. Missing summaries remain visibly unavailable. Updates older than three hours are flagged.
+
+The existing n8n pipeline must read `Ret/Acq!A1:E6` using `UNFORMATTED_VALUE` after its P&L transformation, attach the parsed summary, and then use its existing delivery node. `parseCustomerMix` in `src/customerMix.js` defines and validates that contract. Do not use a workbook snapshot or commit live financial values as the refresh source.
+
 ### Actual performance
 
 - Baseline versus comparison-year KPIs

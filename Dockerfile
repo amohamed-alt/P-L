@@ -29,6 +29,7 @@ RUN addgroup --system --gid 1001 pnl \
 
 COPY --from=build /app/dist /app/public
 COPY server.mjs /app/server.mjs
+COPY src/customerMix.js /app/src/customerMix.js
 
 RUN chown -R pnl:pnl /app
 
