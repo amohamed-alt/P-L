@@ -126,3 +126,11 @@ Every pull request runs:
 - Docker image build
 
 Every push to `main` deploys the production stack and verifies the trusted public HTTPS health endpoint.
+
+## Private Team Activity
+
+Visitors enter a self-reported name before dashboard data loads. The normal dashboard has no activity-report navigation link. The private report is at `/team-activity`; its API requires an independent admin session. Login sessions expire after eight hours, and login failures are throttled.
+
+Activity records live in `DATA_DIR/team-activity.private.json`, outside the static directory, with 90-day retention. Visits count page openings. Active time uses 15-second heartbeats and excludes hidden, unfocused, idle (60 seconds), or suspended tabs; overlapping tabs sharing one viewer cookie are deduplicated. Names are not authenticated identities. No IP addresses are stored in the activity report.
+
+Set `PNL_ACTIVITY_ADMIN_HASH` to a `salt:hex-scrypt-hash` value to override the initial server-only `admin-password.hash`. Generate a new hash with Node `scryptSync(password, salt, 64)` and a random salt; never put a plaintext password in source or the frontend. The initial random password was delivered privately to the owner. Restart the container after rotating credentials; all admin sessions are invalidated.

@@ -1,6 +1,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { scryptSync } from 'node:crypto';
 import { spawn } from 'node:child_process';
 
 const dataDir = await mkdtemp(join(tmpdir(), 'pnl-dashboard-'));
@@ -15,6 +16,7 @@ const child = spawn(process.execPath, ['server.mjs'], {
     STATIC_DIR: resolve('dist'),
     DATA_DIR: dataDir,
     PNL_DATA_INGEST_TOKEN: token,
+    PNL_ACTIVITY_ADMIN_HASH: 'test-salt:' + scryptSync('test-admin-password', 'test-salt', 64).toString('hex'),
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
@@ -64,7 +66,43 @@ try {
   });
   if (!ingest.ok) throw new Error(`Ingest failed with ${ingest.status}: ${await ingest.text()}`);
 
-  const dataResponse = await fetch(`${baseUrl}/data/dashboard-data.json`, { cache: 'no-store' });
+  const anonymousData = await fetch(`${baseUrl}/data/dashboard-data.json`);
+  if (anonymousData.status !== 401) throw new Error('Anonymous dashboard data access must be blocked.');
+  const privateReport = await fetch(`${baseUrl}/api/admin/activity`);
+  if (privateReport.status !== 401) throw new Error('Anonymous admin access must be blocked.');
+  const jsonHeaders = { 'Content-Type': 'application/json', Origin: baseUrl };
+  const enter = await fetch(`${baseUrl}/api/viewer`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ name: 'Smoke Viewer' }) });
+  const viewerCookie = enter.headers.get('set-cookie')?.split(';')[0];
+  if (!enter.ok || !viewerCookie) throw new Error('Viewer entry failed.');
+  const viewerHeaders = { ...jsonHeaders, Cookie: viewerCookie };
+  const crossOrigin = await fetch(`${baseUrl}/api/activity/visit`, { method: 'POST', headers: { ...viewerHeaders, Origin: 'https://untrusted.example' }, body: '{}' });
+  if (crossOrigin.status !== 403) throw new Error('Cross-origin tracking must be blocked.');
+  const visit = await fetch(`${baseUrl}/api/activity/visit`, { method: 'POST', headers: viewerHeaders, body: JSON.stringify({ view: 'actual' }) });
+  const { visitId } = await visit.json();
+  if (!visitId) throw new Error('Visit creation failed.');
+  const viewerReport = await fetch(`${baseUrl}/api/admin/activity`, { headers: { Cookie: viewerCookie } });
+  if (viewerReport.status !== 401) throw new Error('Viewer must not gain admin access.');
+  const invalidLogin = await fetch(`${baseUrl}/api/admin/login`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ password: 'wrong' }) });
+  if (invalidLogin.status !== 401) throw new Error('Wrong admin password accepted.');
+  const login = await fetch(`${baseUrl}/api/admin/login`, { method: 'POST', headers: jsonHeaders, body: JSON.stringify({ password: 'test-admin-password' }) });
+  const adminCookie = login.headers.get('set-cookie')?.split(';')[0];
+  if (!login.ok || !adminCookie?.includes('pnl_admin=')) throw new Error('Admin login failed.');
+  const reportBefore = await (await fetch(`${baseUrl}/api/admin/activity`, { headers: { Cookie: adminCookie } })).json();
+  if (reportBefore.people?.[0]?.name !== 'Smoke Viewer' || reportBefore.visits !== 1 || reportBefore.activeSeconds !== 0) throw new Error('Visit report incorrect.');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  await fetch(`${baseUrl}/api/activity/heartbeat`, { method: 'POST', headers: viewerHeaders, body: JSON.stringify({ visitId, active: true, view: 'forecast' }) });
+  const activeReport = await (await fetch(`${baseUrl}/api/admin/activity`, { headers: { Cookie: adminCookie } })).json();
+  if (!(activeReport.activeSeconds > 0) || activeReport.people[0].view !== 'Forecast') throw new Error('Active heartbeat failed.');
+  await new Promise(resolve => setTimeout(resolve, 100));
+  await fetch(`${baseUrl}/api/activity/heartbeat`, { method: 'POST', headers: viewerHeaders, body: JSON.stringify({ visitId, active: false }) });
+  const idleReport = await (await fetch(`${baseUrl}/api/admin/activity`, { headers: { Cookie: adminCookie } })).json();
+  if (idleReport.activeSeconds !== activeReport.activeSeconds) throw new Error('Idle time counted.');
+  const forged = await fetch(`${baseUrl}/api/admin/activity`, { headers: { Cookie: 'pnl_admin=forged' } });
+  if (forged.status !== 401) throw new Error('Forged admin cookie accepted.');
+  const logout = await fetch(`${baseUrl}/api/admin/logout`, { method: 'POST', headers: { ...jsonHeaders, Cookie: adminCookie }, body: '{}' });
+  if (!logout.ok || (await fetch(`${baseUrl}/api/admin/activity`, { headers: { Cookie: adminCookie } })).status !== 401) throw new Error('Admin logout failed.');
+
+  const dataResponse = await fetch(`${baseUrl}/data/dashboard-data.json`, { cache: 'no-store', headers: { Cookie: viewerCookie } });
   const stored = await dataResponse.json();
   if (stored.monthlyData?.[0]?.booking !== 100 || !stored.metadata?.ingestedAt) {
     throw new Error('Stored dashboard data failed validation.');
@@ -88,3 +126,4 @@ try {
   });
   await rm(dataDir, { recursive: true, force: true });
 }
+
