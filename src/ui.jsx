@@ -19,6 +19,7 @@ export const COLORS = {
 
 export const ACTUAL_NAV = [
   { id: 'overview', label: 'Executive Overview', icon: Gauge },
+  { id: 'customer-mix', label: 'Acquisition & Retention', icon: FileSpreadsheet },
   { id: 'monthly-performance', label: 'Monthly Performance', icon: LineChartIcon },
   { id: 'cost-structure', label: 'Cost Structure', icon: Layers3 },
   { id: 'monthly-matrix', label: 'Monthly Matrix', icon: FileSpreadsheet },

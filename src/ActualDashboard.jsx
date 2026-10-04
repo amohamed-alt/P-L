@@ -3,6 +3,7 @@ import { generateInsights, statusFor, variance } from './dashboard';
 import { KpiCard, StatusBadge, deltaLabel, formatPercent, fullMoney } from './ui';
 import { CostComparison, CostDonut, CoveragePanel, MonthlyPerformance, PeriodComparison } from './ActualCharts';
 import { Insights, MonthlyMatrix } from './ActualDetails';
+import { CustomerMix } from './CustomerMix';
 
 export function ActualDashboard({ data, filters, snapshot, monthlyRows, setFilters }) {
   const currency = data.currency;
@@ -44,6 +45,8 @@ export function ActualDashboard({ data, filters, snapshot, monthlyRows, setFilte
           return <KpiCard key={metric.label} label={metric.label} icon={metric.icon} tone={tone} direction={direction} value={metric.key === 'ratio' ? formatPercent(metric.value) : fullMoney(metric.value, currency)} delta={delta} helper={metric.helper} status={metric.key === 'cashGap' ? (metric.value >= 0 ? 'Surplus' : 'Gap') : undefined} />;
         })}
       </section>
+
+      <CustomerMix summary={data.raw.customerMix} currency={currency} />
 
       <div className="dashboard-grid wide-left">
         <section className="panel"><div className="panel-heading"><div><h2>Period Performance Comparison</h2><p>{snapshot.periodLabel} totals across revenue, cash and cost categories.</p></div><StatusBadge>{filters.baselineYear} vs {filters.comparisonYear}</StatusBadge></div><PeriodComparison snapshot={snapshot} filters={filters} currency={currency} /></section>

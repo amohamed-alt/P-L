@@ -4,6 +4,7 @@ import { access, copyFile, mkdir, readFile, rename, stat, writeFile } from 'node
 import { constants as fsConstants } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
+import { validateCustomerMix } from './src/customerMix.js';
 
 const PORT = Number(process.env.PORT || 3000);
 const STATIC_DIR = resolve(process.env.STATIC_DIR || './dist');
@@ -116,6 +117,10 @@ function normalizeIncomingPayload(body) {
     throw error;
   }
   const ingestedAt = new Date().toISOString();
+  if (payload.customerMix !== undefined) {
+    try { payload.customerMix = validateCustomerMix(payload.customerMix); }
+    catch (issue) { issue.statusCode = 422; throw issue; }
+  }
   return {
     ...payload,
     metadata: {
