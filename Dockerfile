@@ -28,7 +28,7 @@ RUN addgroup --system --gid 1001 pnl \
     && mkdir -p /app/public /app/runtime-data
 
 COPY --from=build /app/dist /app/public
-COPY server.mjs /app/server.mjs
+COPY server.mjs activity.mjs admin-password.hash /app/
 COPY src/customerMix.js /app/src/customerMix.js
 
 RUN chown -R pnl:pnl /app

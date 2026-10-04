@@ -4,6 +4,7 @@ import { access, copyFile, mkdir, readFile, rename, stat, writeFile } from 'node
 import { constants as fsConstants } from 'node:fs';
 import { extname, resolve, sep } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
+import { createActivity } from './activity.mjs';
 import { validateCustomerMix } from './src/customerMix.js';
 
 const PORT = Number(process.env.PORT || 3000);
@@ -214,6 +215,11 @@ async function handleRequest(request, response) {
   setSecurityHeaders(response);
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`);
 
+  if (await activity.handle(request, response, url)) return;
+  if (decodeURIComponent(url.pathname).startsWith('/data/') && !activity.viewer(request)) {
+    sendJson(response, 401, { error: 'Enter your name first.' }); return;
+  }
+
   if (url.pathname === '/api/health' && request.method === 'GET') {
     sendJson(response, 200, {
       status: 'ok', service: 'pnl-dashboard', version: 2,
@@ -262,6 +268,7 @@ async function handleRequest(request, response) {
 }
 
 await mkdir(DATA_DIR, { recursive: true });
+const activity = await createActivity({ dataDir: DATA_DIR, sendJson, readRequestBody });
 const server = createServer((request, response) => {
   handleRequest(request, response).catch((error) => {
     console.error(`[pnl-dashboard] ${error?.stack || error}`);
