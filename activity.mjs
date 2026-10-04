@@ -29,6 +29,9 @@ export async function createActivity({ dataDir, sendJson, readRequestBody }) {
     if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site'])) return false;
     try { return new URL(req.headers.origin).host === req.headers.host; } catch { return false; }
   }
+  await save();
+  const cleanup = setInterval(() => { save().catch(() => console.error('[pnl-dashboard] Activity retention cleanup failed.')); }, 24 * 3600000);
+  cleanup.unref();
   return {
     viewer,
     async handle(req, res, url) {
@@ -96,8 +99,8 @@ export async function createActivity({ dataDir, sendJson, readRequestBody }) {
         // Count only a recent foreground interval. Shared viewer timestamp avoids double-counting concurrent tabs.
         const seconds = Math.min(20, Math.max(0, (now - Math.max(visit.lastTick, person.lastActiveTick || visit.lastTick)) / 1000));
         if (body.active === true && now - visit.lastTick <= 30000) { visit.activeSeconds += seconds; person.lastActiveTick = now; }
-        visit.lastTick = now; visit.lastSeen = now; person.lastSeen = now;
-        visit.view = body.view === 'forecast' ? 'Forecast' : 'Actual'; await save(); sendJson(res, 200, { ok: true }); return true;
+        visit.lastTick = now;
+        if (body.active === true) { visit.lastSeen = now; person.lastSeen = now; visit.view = body.view === 'forecast' ? 'Forecast' : 'Actual'; } await save(); sendJson(res, 200, { ok: true }); return true;
       }
       sendJson(res, 405, { error: 'Method not allowed' }); return true;
     },
